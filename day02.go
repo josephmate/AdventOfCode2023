@@ -74,10 +74,31 @@ func isPossible(game Game) bool {
 	return true
 }
 
+func calcPower(game Game) int {
+	var minRed = 0
+	var minBlue = 0
+	var minGreen = 0
+	// 12 red cubes, 13 green cubes, and 14 blue cubes
+	for _, gameSet := range game.GameSets {
+		for _, cube := range gameSet.Cubes {
+			if cube.Colour == "red" && cube.Count > minRed {
+				minRed = cube.Count
+			}
+			if cube.Colour == "green" && cube.Count > minGreen {
+				minGreen = cube.Count
+			}
+			if cube.Colour == "blue" && cube.Count > minBlue {
+				minBlue = cube.Count
+			}
+		}
+	}
+	return minRed * minBlue * minGreen
+}
+
 func Day02() {
 
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: aoc 2 <part 1 input> <part 2 input>")
+		fmt.Println("Usage: aoc 2 <part 1 input>")
 		os.Exit(1)
 	}
 
@@ -93,6 +114,7 @@ func Day02() {
 	scanner := bufio.NewScanner(file)
 
 	var sum = 0
+	var powerSum = 0
 	// Read line by line
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -105,6 +127,7 @@ func Day02() {
 		if isPossible(game) {
 			sum += game.Id
 		}
+		powerSum += calcPower(game)
 	}
 	// Check for any scanner errors
 	if err := scanner.Err(); err != nil {
@@ -113,5 +136,7 @@ func Day02() {
 	file.Close()
 	fmt.Println("Part 1:")
 	fmt.Println(sum)
+	fmt.Println("Part 2:")
+	fmt.Println(powerSum)
 
 }

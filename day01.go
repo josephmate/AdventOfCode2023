@@ -90,7 +90,7 @@ func calcNumberFromWords(str string) int {
 		if char >= '0' && char <= '9' {
 			firstLast = append(firstLast, int(char-'0'))
 		} else {
-			substring := str[i:len(str)]
+			substring := str[i:]
 			hasNumber, value := getNumFromBuffer(substring)
 			if hasNumber {
 				firstLast = append(firstLast, value)
