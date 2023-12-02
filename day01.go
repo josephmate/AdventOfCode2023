@@ -100,7 +100,7 @@ func calcNumberFromWords(str string) int {
 	return firstLast[0]*10 + firstLast[len(firstLast)-1]
 }
 
-func Day1() {
+func Day01() {
 
 	if len(os.Args) < 4 {
 		fmt.Println("Usage: aoc 1 <part 1 input> <part 2 input>")

@@ -22,7 +22,9 @@ func main() {
 	}
 
 	if day == "1" {
-		Day1()
+		Day01()
+	} else if day == "2" {
+		Day02()
 	} else {
 		fmt.Println(day, "is not recognized.")
 		os.Exit(1)
