@@ -85,6 +85,83 @@ func calcAdjacentNumbers(lines []string) int {
 	return sum
 }
 
+func contains(arr []int, num int) bool {
+	for _, value := range arr {
+		if value == num {
+			return true
+		}
+	}
+	return false
+}
+
+func getAdjacentNumber(lines []string, r int, c int) (bool, int) {
+
+	if r < 0 || r >= len(lines) {
+		fmt.Println("getAdjacentNumber", r, c, "r out of bounds")
+		return false, 0
+	}
+
+	if c < 0 || c >= len(lines[r]) {
+		fmt.Println("getAdjacentNumber", r, c, "c out of bounds")
+		return false, 0
+	}
+
+	var char = lines[r][c]
+	if char < '0' || char > '9' {
+		fmt.Println("getAdjacentNumber", r, c, "not number")
+		return false, 0
+	}
+
+	startCol := c
+	for c < len(lines[r]) && lines[r][c] >= '0' && lines[r][c] <= '9' {
+		c++
+	}
+	endCol := c
+
+	number := convertToNumber(lines[r], startCol, endCol)
+	fmt.Println("getAdjacentNumber", r, c, "got number", number)
+
+	return true, number
+}
+
+func getExactlyTwoAdjacent(lines []string, r int, c int) (bool, int, int) {
+	var adjacentNums []int
+
+	for rDelta := -1; rDelta <= 1; rDelta++ {
+		for cDelta := -1; cDelta <= 1; cDelta++ {
+			hasNumber, number := getAdjacentNumber(lines, r+rDelta, c+cDelta)
+			if hasNumber && !contains(adjacentNums, number) {
+				adjacentNums = append(adjacentNums, number)
+			}
+		}
+	}
+
+	fmt.Println("convertToNumber", r, c, len(adjacentNums))
+	if len(adjacentNums) == 2 {
+		return true, adjacentNums[0], adjacentNums[1]
+	}
+	return false, 0, 0
+}
+
+func calcAdjacentGears(lines []string) int {
+	rows := len(lines)
+	cols := len(lines[0])
+	var sum = 0
+	for r := 0; r < rows; r++ {
+		for c := 0; c < cols; c++ {
+			if lines[r][c] == '*' {
+				hasTwo, g1, g2 := getExactlyTwoAdjacent(lines, r, c)
+				fmt.Println(hasTwo, g1, g2)
+				if hasTwo {
+					sum += g1 * g2
+				}
+			}
+		}
+	}
+
+	return sum
+}
+
 func Day03() {
 
 	if len(os.Args) < 3 {
@@ -120,4 +197,6 @@ func Day03() {
 
 	fmt.Println("Part 1:")
 	fmt.Println(calcAdjacentNumbers(lines))
+	fmt.Println("Part 2:")
+	fmt.Println(calcAdjacentGears(lines))
 }
