@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+var DEBUG = false
+
 func convertToNumber(line string, startCol int, endCol int) int {
 	var sum = 0
 	for c := startCol; c < endCol; c++ {
@@ -97,29 +99,47 @@ func contains(arr []int, num int) bool {
 func getAdjacentNumber(lines []string, r int, c int) (bool, int) {
 
 	if r < 0 || r >= len(lines) {
-		fmt.Println("getAdjacentNumber", r, c, "r out of bounds")
+		if DEBUG {
+			fmt.Println("getAdjacentNumber", r, c, "r out of bounds")
+		}
 		return false, 0
 	}
 
 	if c < 0 || c >= len(lines[r]) {
-		fmt.Println("getAdjacentNumber", r, c, "c out of bounds")
+		if DEBUG {
+			fmt.Println("getAdjacentNumber", r, c, "c out of bounds")
+		}
 		return false, 0
 	}
 
 	var char = lines[r][c]
 	if char < '0' || char > '9' {
-		fmt.Println("getAdjacentNumber", r, c, "not number")
+		if DEBUG {
+			fmt.Println("getAdjacentNumber", r, c, "not number")
+		}
 		return false, 0
 	}
 
-	startCol := c
-	for c < len(lines[r]) && lines[r][c] >= '0' && lines[r][c] <= '9' {
-		c++
+	var startCol = c
+	for startCol >= 0 && lines[r][startCol] >= '0' && lines[r][startCol] <= '9' {
+		if DEBUG {
+			fmt.Println("getAdjacentNumber startCol", r, startCol, string(lines[r][startCol]))
+		}
+		startCol--
 	}
-	endCol := c
+	startCol++
+	var endCol = c
+	for endCol < len(lines[r]) && lines[r][endCol] >= '0' && lines[r][endCol] <= '9' {
+		if DEBUG {
+			fmt.Println("getAdjacentNumber endCol", r, endCol, string(lines[r][endCol]))
+		}
+		endCol++
+	}
 
 	number := convertToNumber(lines[r], startCol, endCol)
-	fmt.Println("getAdjacentNumber", r, c, "got number", number)
+	if DEBUG {
+		fmt.Println("getAdjacentNumber", r, c, "got number", number, "start", startCol, "end", endCol)
+	}
 
 	return true, number
 }
@@ -136,7 +156,9 @@ func getExactlyTwoAdjacent(lines []string, r int, c int) (bool, int, int) {
 		}
 	}
 
-	fmt.Println("convertToNumber", r, c, len(adjacentNums))
+	if DEBUG {
+		fmt.Println("getExactlyTwoAdjacent", r, c, "len", len(adjacentNums))
+	}
 	if len(adjacentNums) == 2 {
 		return true, adjacentNums[0], adjacentNums[1]
 	}
@@ -151,7 +173,9 @@ func calcAdjacentGears(lines []string) int {
 		for c := 0; c < cols; c++ {
 			if lines[r][c] == '*' {
 				hasTwo, g1, g2 := getExactlyTwoAdjacent(lines, r, c)
-				fmt.Println(hasTwo, g1, g2)
+				if DEBUG {
+					fmt.Println(hasTwo, g1, g2)
+				}
 				if hasTwo {
 					sum += g1 * g2
 				}
