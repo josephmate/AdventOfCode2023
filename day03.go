@@ -7,8 +7,6 @@ import (
 	"os"
 )
 
-var DEBUG = false
-
 func convertToNumber(line string, startCol int, endCol int) int {
 	var sum = 0
 	for c := startCol; c < endCol; c++ {
@@ -87,15 +85,6 @@ func calcAdjacentNumbers(lines []string) int {
 	return sum
 }
 
-func contains(arr []int, num int) bool {
-	for _, value := range arr {
-		if value == num {
-			return true
-		}
-	}
-	return false
-}
-
 func getAdjacentNumber(lines []string, r int, c int) (bool, int) {
 
 	if r < 0 || r >= len(lines) {
@@ -150,7 +139,7 @@ func getExactlyTwoAdjacent(lines []string, r int, c int) (bool, int, int) {
 	for rDelta := -1; rDelta <= 1; rDelta++ {
 		for cDelta := -1; cDelta <= 1; cDelta++ {
 			hasNumber, number := getAdjacentNumber(lines, r+rDelta, c+cDelta)
-			if hasNumber && !contains(adjacentNums, number) {
+			if hasNumber && !Contains(adjacentNums, number) {
 				adjacentNums = append(adjacentNums, number)
 			}
 		}

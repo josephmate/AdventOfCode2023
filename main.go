@@ -27,6 +27,8 @@ func main() {
 		Day02()
 	} else if day == "3" {
 		Day03()
+	} else if day == "4" {
+		Day04()
 	} else {
 		fmt.Println(day, "is not recognized.")
 		os.Exit(1)
