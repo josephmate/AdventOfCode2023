@@ -98,6 +98,10 @@ func calcScore(scratch Scratchcard) int {
 	return score
 }
 
+func calcScratchcardsWon(scratchcards []Scratchcard) int {
+	return 0
+}
+
 func Day04() {
 
 	if len(os.Args) < 3 {
@@ -118,6 +122,7 @@ func Day04() {
 
 	// Read line by line
 	var sum = 0
+	var scratchcards []Scratchcard
 	for scanner.Scan() {
 		line := scanner.Text()
 		scratch, err := parseScratchcard(line)
@@ -126,6 +131,7 @@ func Day04() {
 			continue
 		}
 		sum += calcScore(scratch)
+		scratchcards = append(scratchcards, scratch)
 		if err != nil {
 			fmt.Println("Could not parse input", err)
 			os.Exit(1)
@@ -134,6 +140,8 @@ func Day04() {
 
 	fmt.Println("Part 1:")
 	fmt.Println(sum)
+	fmt.Println("Part 2:")
+	fmt.Println(calcScratchcardsWon(scratchcards))
 
 	// Check for any scanner errors
 	if err := scanner.Err(); err != nil {
