@@ -178,7 +178,7 @@ func calcAdjacentGears(lines []string) int {
 func Day03() {
 
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: aoc 2 <part 1 input>")
+		fmt.Println("Usage: aoc 3 <part 1 input>")
 		os.Exit(1)
 	}
 

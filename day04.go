@@ -164,7 +164,7 @@ func calcScratchcardsWon(scratchcards []Scratchcard) big.Int {
 func Day04() {
 
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: aoc 2 <part 1 input>")
+		fmt.Println("Usage: aoc 4 <part 1 input>")
 		os.Exit(1)
 	}
 
