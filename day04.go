@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"regexp"
 	"strconv"
@@ -98,8 +99,66 @@ func calcScore(scratch Scratchcard) int {
 	return score
 }
 
-func calcScratchcardsWon(scratchcards []Scratchcard) int {
-	return 0
+func calcBasicScore(scratch Scratchcard) int {
+	var matches = 0
+
+	// all though O(N^2), the input is bounded by a small constant 10*26
+	// which executes quickly
+	for _, num := range scratch.Plays {
+		if Contains(scratch.Winners, num) {
+			if DEBUG {
+				fmt.Println("calcBasicScore found matches", scratch.Winners, scratch.Plays, num)
+			}
+			matches++
+		}
+	}
+
+	if DEBUG {
+		fmt.Println("calcBasicScore", matches)
+	}
+	return matches
+}
+
+func calcScratchcardsWonRecursive(scratchcards []Scratchcard, index int, memoize map[int]big.Int) big.Int {
+	memoizedVal, hasIt := memoize[index]
+	if hasIt {
+		return memoizedVal
+	}
+
+	basicScore := calcBasicScore(scratchcards[index])
+	fmt.Println("calcScratchcardsWonRecursive basicScore", index+1, basicScore)
+	if basicScore == 0 {
+		fmt.Println("calcScratchcardsWonRecursive empty", index+1, 1)
+		var one big.Int
+		one.SetInt64(1)
+		memoize[index] = one
+		return one
+	}
+	var sum big.Int
+	sum.SetInt64(int64(1))
+	for j := index + 1; j < len(scratchcards) && j <= index+basicScore; j++ {
+		partial := calcScratchcardsWonRecursive(scratchcards, j, memoize)
+		sum.Add(&sum, &partial)
+	}
+
+	if DEBUG {
+		fmt.Println("calcScratchcardsWonRecursive", index+1, sum.String())
+	}
+	memoize[index] = sum
+	return sum
+}
+
+func calcScratchcardsWon(scratchcards []Scratchcard) big.Int {
+
+	var sum big.Int
+	sum.SetInt64(0)
+	memoize := map[int]big.Int{}
+	for i := len(scratchcards) - 1; i >= 0; i-- {
+		partial := calcScratchcardsWonRecursive(scratchcards, i, memoize)
+		sum.Add(&sum, &partial)
+	}
+
+	return sum
 }
 
 func Day04() {
@@ -122,8 +181,12 @@ func Day04() {
 
 	// Read line by line
 	var sum = 0
+	var lineNum = 1
 	var scratchcards []Scratchcard
 	for scanner.Scan() {
+		if DEBUG {
+			fmt.Println("Processing line", lineNum)
+		}
 		line := scanner.Text()
 		scratch, err := parseScratchcard(line)
 		if err != nil {
@@ -136,12 +199,15 @@ func Day04() {
 			fmt.Println("Could not parse input", err)
 			os.Exit(1)
 		}
+		lineNum++
 	}
 
 	fmt.Println("Part 1:")
 	fmt.Println(sum)
 	fmt.Println("Part 2:")
-	fmt.Println(calcScratchcardsWon(scratchcards))
+	// 382289284025616647485299834732348921054 too high
+	part2 := calcScratchcardsWon(scratchcards)
+	fmt.Println(part2.String())
 
 	// Check for any scanner errors
 	if err := scanner.Err(); err != nil {
