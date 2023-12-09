@@ -73,6 +73,47 @@ func predictNextValues(histories [][]int) int {
 	return sum
 }
 
+func predictPrevValue(history []int) int {
+	var firstEntries []int
+	var deltas [][]int
+	deltas = append(deltas, history)
+	firstEntries = append(firstEntries, history[0])
+	for !allZero(deltas[len(deltas)-1]) {
+		var nextRow []int
+		prevRow := deltas[len(deltas)-1]
+		var prevVal = prevRow[0]
+
+		for _, val := range prevRow[1:] {
+			nextRow = append(nextRow, val-prevVal)
+			prevVal = val
+		}
+
+		deltas = append(deltas, nextRow)
+		firstEntries = append(firstEntries, nextRow[0])
+	}
+
+	var result = 0
+	for i := len(firstEntries) - 1; i >= 0; i-- {
+		if DEBUG {
+			fmt.Println("predictPrevValue", firstEntries[i]-result, "-", firstEntries[i], "-", result)
+		}
+		result = firstEntries[i] - result
+	}
+	return result
+}
+
+func predictPrevValues(histories [][]int) int {
+	var sum = 0
+	for _, history := range histories {
+		result := predictPrevValue(history)
+		if DEBUG {
+			fmt.Println("predictPrevValues", result, history)
+		}
+		sum += result
+	}
+	return sum
+}
+
 func Day09() {
 
 	if len(os.Args) < 3 {
@@ -105,4 +146,5 @@ func Day09() {
 	}
 	fmt.Println(predictNextValues(histories))
 	fmt.Println("Part 2:")
+	fmt.Println(predictPrevValues(histories))
 }
