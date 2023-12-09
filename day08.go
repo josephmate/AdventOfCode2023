@@ -34,6 +34,52 @@ func parseDay08(text string) (string, map[string][2]string) {
 	return firstList, m
 }
 
+func allEndsWithZ(currents []string) bool {
+	for _, current := range currents {
+		if !strings.HasSuffix(current, "Z") {
+			return false
+		}
+	}
+	return true
+}
+
+// TODO: takes too long to
+//
+//	next try to detect repeats from each of the parallel paths and figure out when all parallel
+//	paths align.
+func runUntilAllEndsWithZ(directions string, mapping map[string][2]string) int {
+	var currents = []string{}
+	for key := range mapping {
+		if strings.HasSuffix(key, "A") {
+			currents = append(currents, key)
+		}
+	}
+	var steps = 0
+
+	if DEBUG {
+		fmt.Println("runUntilAllEndsWithZ", currents)
+	}
+	for !allEndsWithZ(currents) {
+		var nextCurrents = []string{}
+		for _, current := range currents {
+			nextStepDirection := directions[steps%len(directions)]
+			if nextStepDirection == 'R' {
+				current = mapping[current][1]
+			} else {
+				current = mapping[current][0]
+			}
+			nextCurrents = append(nextCurrents, current)
+		}
+		currents = nextCurrents
+		steps++
+		if DEBUG {
+			fmt.Println("runUntilAllEndsWithZ", currents)
+		}
+	}
+
+	return steps
+}
+
 func runUntilZZZ(directions string, mapping map[string][2]string) int {
 	var current = "AAA"
 	var steps = 0
@@ -54,12 +100,13 @@ func runUntilZZZ(directions string, mapping map[string][2]string) int {
 
 func Day08() {
 
-	if len(os.Args) < 3 {
+	if len(os.Args) < 4 {
 		fmt.Println("Usage: aoc 5 <part 1 input>")
 		os.Exit(1)
 	}
 
 	filenamePart1 := os.Args[2]
+	filenamePart2 := os.Args[3]
 	// Open the file
 	file, err := os.Open(filenamePart1)
 	if err != nil {
@@ -86,4 +133,21 @@ func Day08() {
 	}
 	fmt.Println(runUntilZZZ(directions, mapping))
 	fmt.Println("Part 2:")
+
+	file2, err := os.Open(filenamePart2)
+	if err != nil {
+		log.Fatalf("Error opening file: %s", err)
+	}
+	defer file2.Close()
+	reader2 := io.Reader(file2)
+	textBytes2, err := io.ReadAll(reader2)
+	if err != nil {
+		fmt.Println("Error reading input:", err)
+		return
+	}
+
+	text2 := string(textBytes2)
+	directions2, mapping2 := parseDay08(text2)
+	fmt.Println(runUntilAllEndsWithZ(directions2, mapping2))
+
 }
