@@ -38,11 +38,11 @@ func parseHands(input string) []Hand {
 }
 
 func compareCards(i string, j string) bool {
-
+	return false // TODO
 }
 
 func calcTotalWinnings(hands []Hand) int {
-
+	return 0 // TODO
 }
 
 func Day07() {
