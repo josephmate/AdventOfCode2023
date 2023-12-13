@@ -8,22 +8,26 @@ import (
 	"strings"
 )
 
-func parseDay13(text string) [][]string {
+func parseDay13(text string) [][][]byte {
 	parts := strings.Split(text, "\n\n")
 
-	var result [][]string
+	var result [][][]byte
 
 	for _, part := range parts {
 		trimmedPart := strings.TrimSpace(part)
 		if trimmedPart != "" {
-			result = append(result, strings.Split(trimmedPart, "\n"))
+			var stoneMap [][]byte
+			for _, row := range strings.Split(trimmedPart, "\n") {
+				stoneMap = append(stoneMap, []byte(row))
+			}
+			result = append(result, stoneMap)
 		}
 	}
 
 	return result
 }
 
-func areColumnsTheSame(stoneMap []string, a int, b int) bool {
+func areColumnsTheSame(stoneMap [][]byte, a int, b int) bool {
 	for r, _ := range stoneMap {
 		if stoneMap[r][a] != stoneMap[r][b] {
 			return false
@@ -32,7 +36,7 @@ func areColumnsTheSame(stoneMap []string, a int, b int) bool {
 	return true
 }
 
-func isReflectedVertically(stoneMap []string, startCol int) bool {
+func isReflectedVertically(stoneMap [][]byte, startCol int) bool {
 
 	// 0 1 2
 	//   ^ ^
@@ -52,7 +56,7 @@ func isReflectedVertically(stoneMap []string, startCol int) bool {
 	return true
 }
 
-func findVerticalReflection(stoneMap []string) (bool, int) {
+func findVerticalReflection(stoneMap [][]byte) (bool, int) {
 	for c := 0; c < len(stoneMap[0])-1; c++ {
 		if isReflectedVertically(stoneMap, c) {
 			return true, c + 1
@@ -61,7 +65,7 @@ func findVerticalReflection(stoneMap []string) (bool, int) {
 	return false, 0
 }
 
-func areRowsTheSame(stoneMap []string, a int, b int) bool {
+func areRowsTheSame(stoneMap [][]byte, a int, b int) bool {
 	for c, _ := range stoneMap[0] {
 		if stoneMap[a][c] != stoneMap[b][c] {
 			return false
@@ -70,7 +74,7 @@ func areRowsTheSame(stoneMap []string, a int, b int) bool {
 	return true
 }
 
-func isReflectedHorizontally(stoneMap []string, startRow int) bool {
+func isReflectedHorizontally(stoneMap [][]byte, startRow int) bool {
 
 	var otherRow = startRow + 1
 	for r := startRow; r >= 0 && otherRow < len(stoneMap); r-- {
@@ -84,7 +88,7 @@ func isReflectedHorizontally(stoneMap []string, startRow int) bool {
 	return true
 }
 
-func findHorizontalReflection(stoneMap []string) (bool, int) {
+func findHorizontalReflection(stoneMap [][]byte) (bool, int) {
 	for r := 0; r < len(stoneMap)-1; r++ {
 		if isReflectedHorizontally(stoneMap, r) {
 			return true, r + 1
@@ -93,7 +97,7 @@ func findHorizontalReflection(stoneMap []string) (bool, int) {
 	return false, 0
 }
 
-func calcReflections(maps [][]string) int {
+func calcReflections(maps [][][]byte) int {
 	var sum = 0
 	for _, stoneMap := range maps {
 		hasVerticalReflection, column := findVerticalReflection(stoneMap)
@@ -105,6 +109,26 @@ func calcReflections(maps [][]string) int {
 			sum += 100 * column
 		}
 	}
+
+	return sum
+}
+
+func calcSmudgeReflections(maps [][][]byte) int {
+	var sum = 0
+	// for _, stoneMap := range maps {
+	// 	for r, row := range stoneMap {
+	// 		for c, col := range row {
+	// 			hasVerticalReflection, column := findVerticalReflection(stoneMap)
+	// 			if hasVerticalReflection {
+	// 				sum += column
+	// 			}
+	// 			hasHorizontalReflection, column := findHorizontalReflection(stoneMap)
+	// 			if hasHorizontalReflection {
+	// 				sum += 100 * column
+	// 			}
+	// 		}
+	// 	}
+	// }
 
 	return sum
 }
@@ -141,4 +165,5 @@ func Day13() {
 	fmt.Println("Part 1:")
 	fmt.Println(calcReflections(maps))
 	fmt.Println("Part 2:")
+	fmt.Println(calcSmudgeReflections(maps))
 }
