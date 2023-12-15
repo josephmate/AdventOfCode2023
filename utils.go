@@ -1,6 +1,6 @@
 package main
 
-var DEBUG = true
+var DEBUG = false
 
 func Contains(arr []int, num int) bool {
 	for _, value := range arr {
