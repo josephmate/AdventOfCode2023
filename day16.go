@@ -50,13 +50,13 @@ const RIGHT = 1
 const DOWN = 2
 const LEFT = 3
 
-func simulateBeams(mirrorMap [][]byte) int {
+func simulateBeams(mirrorMap [][]byte, startBeam [3]int) int {
 	// r, c, direction
 	var beamQueue [][3]int
 	engergized := map[[2]int]bool{}
 	visited := map[[3]int]bool{}
 	// The beam enters in the top-left corner from the left and heading to the right.
-	beamQueue = append(beamQueue, [3]int{0, 0, RIGHT})
+	beamQueue = append(beamQueue, startBeam)
 
 	for len(beamQueue) > 0 {
 		currentBeam := beamQueue[0]
@@ -169,6 +169,28 @@ func simulateBeams(mirrorMap [][]byte) int {
 	return len(engergized)
 }
 
+func simulateExampleBeam(mirrorMap [][]byte) int {
+	return simulateBeams(mirrorMap, [3]int{0, 0, RIGHT})
+}
+
+func maximizeBeamEnergy(mirrorMap [][]byte) int {
+	var max = 0
+
+	// enter from all the tops and bottoms
+	for c, _ := range mirrorMap[0] {
+		max = Max(max, simulateBeams(mirrorMap, [3]int{0, c, DOWN}))
+		max = Max(max, simulateBeams(mirrorMap, [3]int{len(mirrorMap) - 1, c, UP}))
+	}
+
+	// enter from all the lefts and right
+	for r, _ := range mirrorMap {
+		max = Max(max, simulateBeams(mirrorMap, [3]int{r, 0, RIGHT}))
+		max = Max(max, simulateBeams(mirrorMap, [3]int{r, len(mirrorMap[r]) - 1, LEFT}))
+	}
+
+	return max
+}
+
 func Day16() {
 
 	if len(os.Args) < 3 {
@@ -199,6 +221,7 @@ func Day16() {
 		fmt.Println(mirrorMap)
 	}
 	fmt.Println("Part 1:")
-	fmt.Println(simulateBeams(mirrorMap))
+	fmt.Println(simulateExampleBeam(mirrorMap))
 	fmt.Println("Part 2:")
+	fmt.Println(maximizeBeamEnergy(mirrorMap))
 }
