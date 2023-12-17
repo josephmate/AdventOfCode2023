@@ -143,6 +143,7 @@ func goStraight(crucibleMap [][]int, cruciblePositionWithCost CruciblePositionWi
 	}
 	return CruciblePositionWithCost{}, false
 }
+
 func goLeftRight(crucibleMap [][]int, cruciblePositionWithCost CruciblePositionWithCost, targetPosn [2]int) []CruciblePositionWithCost {
 	direction := cruciblePositionWithCost.Direction
 	currentRow := cruciblePositionWithCost.Row
@@ -199,6 +200,97 @@ func goLeftRight(crucibleMap [][]int, cruciblePositionWithCost CruciblePositionW
 				StraightCounter: 1,
 				Distance:        ManhattanDistance([2]int{newRowB, newColB}, targetPosn),
 				Cost:            cruciblePositionWithCost.Cost + crucibleMap[newRowB][newColB],
+				Direction:       DOWN,
+			})
+		}
+		return result
+	}
+}
+
+func goLeftRightWith4(crucibleMap [][]int, cruciblePositionWithCost CruciblePositionWithCost, targetPosn [2]int) []CruciblePositionWithCost {
+	direction := cruciblePositionWithCost.Direction
+	currentRow := cruciblePositionWithCost.Row
+	currentCol := cruciblePositionWithCost.Col
+	if direction == UP || direction == DOWN {
+		var newRowA = currentRow
+		var newColA = currentCol
+		var newCostA = cruciblePositionWithCost.Cost
+		var newRowB = currentRow
+		var newColB = currentCol
+		var newCostB = cruciblePositionWithCost.Cost
+		for i := 0; i < 4; i++ {
+
+			newColA -= 1
+			if newColA >= 0 && newColA < len(crucibleMap[0]) {
+				newCostA += crucibleMap[newRowA][newColA]
+			}
+
+			newColB += 1
+			if newColB >= 0 && newColB < len(crucibleMap[0]) {
+				newCostB += crucibleMap[newRowB][newColB]
+			}
+		}
+
+		var result []CruciblePositionWithCost
+		if newColA >= 0 && newColA < len(crucibleMap[0]) {
+			result = append(result, CruciblePositionWithCost{
+				Row:             newRowA,
+				Col:             newColA,
+				StraightCounter: 4,
+				Distance:        ManhattanDistance([2]int{newRowA, newColA}, targetPosn),
+				Cost:            newCostA,
+				Direction:       LEFT,
+			})
+		}
+		if newColB >= 0 && newColB < len(crucibleMap[0]) {
+			result = append(result, CruciblePositionWithCost{
+				Row:             newRowB,
+				Col:             newColB,
+				StraightCounter: 4,
+				Distance:        ManhattanDistance([2]int{newRowB, newColB}, targetPosn),
+				Cost:            newCostB,
+				Direction:       RIGHT,
+			})
+		}
+		return result
+	} else { // LEFT/RIGHT
+		var newRowA = currentRow
+		var newColA = currentCol
+		var newCostA = cruciblePositionWithCost.Cost
+		var newRowB = currentRow
+		var newColB = currentCol
+		var newCostB = cruciblePositionWithCost.Cost
+		for i := 0; i < 4; i++ {
+
+			newRowA -= 1
+			if newRowA >= 0 && newRowA < len(crucibleMap) {
+				newCostA += crucibleMap[newRowA][newColA]
+			}
+
+			newRowB += 1
+			if newRowB >= 0 && newRowB < len(crucibleMap) {
+				newCostB += crucibleMap[newRowB][newColB]
+			}
+		}
+
+		var result []CruciblePositionWithCost
+		if newRowA >= 0 && newRowA < len(crucibleMap) {
+			result = append(result, CruciblePositionWithCost{
+				Row:             newRowA,
+				Col:             newColA,
+				StraightCounter: 4,
+				Distance:        ManhattanDistance([2]int{newRowA, newColA}, targetPosn),
+				Cost:            newCostA,
+				Direction:       UP,
+			})
+		}
+		if newRowB >= 0 && newRowB < len(crucibleMap) {
+			result = append(result, CruciblePositionWithCost{
+				Row:             newRowB,
+				Col:             newColB,
+				StraightCounter: 4,
+				Distance:        ManhattanDistance([2]int{newRowB, newColB}, targetPosn),
+				Cost:            newCostB,
 				Direction:       DOWN,
 			})
 		}
@@ -285,6 +377,85 @@ func findCoolestPath(crucibleMap [][]int) int {
 	return min
 }
 
+func findCoolestPathForUltraCrucible(crucibleMap [][]int) int {
+	// use priority queue to find shortest path
+	// unfortunately, go doesn't have priority queue
+	// so we need to use a heap
+	pq := make(PriorityQueue, 0)
+	heap.Init(&pq)
+
+	targetPosn := [2]int{len(crucibleMap) - 1, len(crucibleMap[0]) - 1}
+
+	// going right as first step
+	heap.Push(&pq, CruciblePositionWithCost{
+		Row:             0,
+		Col:             4,
+		StraightCounter: 4,
+		Distance:        ManhattanDistance([2]int{0, 4}, targetPosn),
+		Cost:            crucibleMap[0][1] + crucibleMap[0][2] + crucibleMap[0][3] + crucibleMap[0][4],
+		Direction:       RIGHT,
+	})
+	// going down as first step
+	heap.Push(&pq, CruciblePositionWithCost{
+		Row:             4,
+		Col:             0,
+		StraightCounter: 4,
+		Distance:        ManhattanDistance([2]int{4, 0}, targetPosn),
+		Cost:            crucibleMap[1][0] + crucibleMap[2][0] + crucibleMap[3][0] + crucibleMap[4][0],
+		Direction:       DOWN,
+	})
+
+	// r, c, straightCounter, Direction
+	minCostSoFar := map[CruciblePosition]int{}
+	for len(pq) > 0 {
+		currentPositionWithCost := heap.Pop(&pq).(CruciblePositionWithCost)
+		if DEBUG {
+			fmt.Println("findCoolestPathForUltraCrucible", currentPositionWithCost)
+		}
+		currentPosition := toCruciblePosition(currentPositionWithCost)
+		// check if we already visited this position with a lower cost
+		minCost := minCostSoFar[currentPosition]
+		if (minCost > 0 && currentPositionWithCost.Cost >= minCost) ||
+			currentPositionWithCost.Row < 0 ||
+			currentPositionWithCost.Row >= len(crucibleMap) ||
+			currentPositionWithCost.Col < 0 ||
+			currentPositionWithCost.Col >= len(crucibleMap[0]) {
+			// we already visited this scenario with less cost
+			continue
+		}
+
+		minCostSoFar[currentPosition] = currentPositionWithCost.Cost
+
+		if currentPositionWithCost.StraightCounter < 10 {
+			nextMove, hasIt := goStraight(crucibleMap, currentPositionWithCost, targetPosn)
+			if hasIt {
+				heap.Push(&pq, nextMove)
+			}
+		}
+		// turn left and right
+		for _, nextMove := range goLeftRightWith4(crucibleMap, currentPositionWithCost, targetPosn) {
+			heap.Push(&pq, nextMove)
+		}
+	}
+
+	var min = math.MaxInt32
+	for straightCounter := 1; straightCounter <= 3; straightCounter++ {
+		for direction := 0; direction <= 3; direction++ {
+			val := minCostSoFar[CruciblePosition{
+				Row:             targetPosn[0],
+				Col:             targetPosn[1],
+				StraightCounter: straightCounter,
+				Direction:       direction,
+			}]
+			if val > 0 {
+				min = Min(min, val)
+			}
+		}
+	}
+
+	return min
+}
+
 func Day17() {
 
 	if len(os.Args) < 3 {
@@ -317,4 +488,5 @@ func Day17() {
 	fmt.Println("Part 1:")
 	fmt.Println(findCoolestPath(crucibleMap))
 	fmt.Println("Part 2:")
+	fmt.Println(findCoolestPathForUltraCrucible(crucibleMap))
 }
