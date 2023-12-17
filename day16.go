@@ -45,11 +45,6 @@ func parseMirrorMap(input string) [][]byte {
 	return byteLines
 }
 
-const UP = 0
-const RIGHT = 1
-const DOWN = 2
-const LEFT = 3
-
 func simulateBeams(mirrorMap [][]byte, startBeam [3]int) int {
 	// r, c, direction
 	var beamQueue [][3]int
