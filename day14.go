@@ -62,7 +62,7 @@ func moveEverythingNorth(rollingBolders [][]byte) int {
 func Day14() {
 
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: aoc 13 <input>")
+		fmt.Println("Usage: aoc 14 <input>")
 		os.Exit(1)
 	}
 

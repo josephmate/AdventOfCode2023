@@ -121,7 +121,7 @@ func hashmapInitSeq(initSeq []string) int {
 func Day15() {
 
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: aoc 13 <input>")
+		fmt.Println("Usage: aoc 15 <input>")
 		os.Exit(1)
 	}
 

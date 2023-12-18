@@ -459,7 +459,7 @@ func findCoolestPathForUltraCrucible(crucibleMap [][]int) int {
 func Day17() {
 
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: aoc 13 <input>")
+		fmt.Println("Usage: aoc 17 <input>")
 		os.Exit(1)
 	}
 

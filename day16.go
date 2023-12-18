@@ -189,7 +189,7 @@ func maximizeBeamEnergy(mirrorMap [][]byte) int {
 func Day16() {
 
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: aoc 13 <input>")
+		fmt.Println("Usage: aoc 16 <input>")
 		os.Exit(1)
 	}
 
