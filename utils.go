@@ -7,6 +7,17 @@ const RIGHT = 1
 const DOWN = 2
 const LEFT = 3
 
+func FindChar(char byte, matrix [][]byte) (int, int, bool) {
+	for r, row := range matrix {
+		for c, col := range row {
+			if col == char {
+				return r, c, true
+			}
+		}
+	}
+	return -1, -1, false
+}
+
 func Contains(arr []int, num int) bool {
 	for _, value := range arr {
 		if value == num {

@@ -74,7 +74,7 @@ func simulate1000(commModRecords []CommModRecord) int {
 func Day20() {
 
 	if len(os.Args) < 3 {
-		fmt.Println("Usage: aoc 18 <input>")
+		fmt.Println("Usage: aoc 20 <input>")
 		os.Exit(1)
 	}
 
