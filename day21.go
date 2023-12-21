@@ -2,10 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io"
-	"log"
 	"os"
-	"strconv"
 	"strings"
 )
 
@@ -77,43 +74,113 @@ func countFlowers(steps int, gardenMap [][]byte) int {
 	return len(currentVisited)
 }
 
+func generateGardenMovesInfinite(posn [2]int, gardenMap [][]byte) [][2]int {
+	row := posn[0]
+	col := posn[1]
+
+	var result [][2]int
+
+	var upRow = row - 1
+	if upRow < 0 {
+		upRow = len(gardenMap) - 1
+	}
+	if gardenMap[upRow][col] == '.' {
+		result = append(result, [2]int{upRow, col})
+	}
+
+	var downRow = row + 1
+	if downRow >= len(gardenMap) {
+		downRow = 0
+	}
+	if gardenMap[downRow][col] == '.' {
+		result = append(result, [2]int{downRow, col})
+	}
+
+	var leftCol = col - 1
+	if leftCol < 0 {
+		leftCol = len(gardenMap[row]) - 1
+	}
+	if gardenMap[row][leftCol] == '.' {
+		result = append(result, [2]int{row, leftCol})
+	}
+
+	var rightCol = col + 1
+	if rightCol >= len(gardenMap[row]) {
+		rightCol = 0
+	}
+	if gardenMap[row][rightCol] == '.' {
+		result = append(result, [2]int{row, rightCol})
+	}
+
+	return result
+}
+
+func runOneStepInfinite(prevVisited map[[2]int]bool, gardenMap [][]byte) map[[2]int]bool {
+	nextVisited := map[[2]int]bool{}
+
+	for key := range prevVisited {
+		for _, move := range generateGardenMovesInfinite(key, gardenMap) {
+			nextVisited[move] = true
+		}
+	}
+
+	return nextVisited
+}
+
+func countFlowersInfinite(steps int, gardenMap [][]byte) int {
+	// find start location
+	startRow, startCol, found := FindChar('S', gardenMap)
+	if !found {
+		fmt.Println("Did not find S in the garden map!")
+		return -1
+	}
+	if DEBUG {
+		fmt.Println("countFlowers startRow", startRow, "startCol", startCol)
+	}
+	gardenMap[startRow][startCol] = '.'
+
+	var currentVisited = map[[2]int]bool{}
+	currentVisited[[2]int{startRow, startCol}] = true
+	for step := 0; step < steps; step++ {
+		currentVisited = runOneStepInfinite(currentVisited, gardenMap)
+	}
+
+	return len(currentVisited)
+}
+
 func Day21() {
 
 	if len(os.Args) < 4 {
-		fmt.Println("Usage: aoc 21 <steps> <input>")
+		fmt.Println("Usage: aoc 21 <steps> <input part 1> <steps> <input part 2>")
 		os.Exit(1)
 	}
 
-	steps, err := strconv.Atoi(os.Args[2])
-	if err != nil {
-		fmt.Println("Error occurred parsing steps:", os.Args[2], err)
-		return
-	}
-	filenamePart1 := os.Args[3]
-	// Open the file
-	file, err := os.Open(filenamePart1)
-	if err != nil {
-		log.Fatalf("Error opening file: %s", err)
-	}
-	defer file.Close()
-	reader := io.Reader(file)
-	textBytes, err := io.ReadAll(reader)
-	if err != nil {
-		fmt.Println("Error reading input:", err)
-		return
-	}
+	part1Steps := ParseIntOrExit(os.Args[2])
+	part1Text := ReadFileOrExit(os.Args[3])
+	part2Steps := ParseIntOrExit(os.Args[4])
+	part2Text := ReadFileOrExit(os.Args[5])
 
-	text := string(textBytes)
-	if DEBUG {
-		fmt.Println(steps)
-		fmt.Println(text)
-	}
-	gardenMap := parseGardenMap(text)
-	if DEBUG {
-		fmt.Println(steps)
-		fmt.Println(gardenMap)
-	}
 	fmt.Println("Part 1:")
-	fmt.Println(countFlowers(steps, gardenMap))
+	if DEBUG {
+		fmt.Println(part1Steps)
+		fmt.Println(part1Text)
+	}
+	part1GardenMap := parseGardenMap(part1Text)
+	if DEBUG {
+		fmt.Println(part1Steps)
+		fmt.Println(part1GardenMap)
+	}
+	fmt.Println(countFlowers(part1Steps, part1GardenMap))
+
 	fmt.Println("Part 2:")
+	if DEBUG {
+		fmt.Println(part2Steps)
+		fmt.Println(part2Text)
+	}
+	part2GardenMap := parseGardenMap(part2Text)
+	if DEBUG {
+		fmt.Println(part2Steps)
+		fmt.Println(part2GardenMap)
+	}
+	fmt.Println(countFlowersInfinite(part2Steps, part2GardenMap))
 }

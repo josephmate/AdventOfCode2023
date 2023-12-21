@@ -1,11 +1,44 @@
 package main
 
+import (
+	"fmt"
+	"io"
+	"os"
+	"strconv"
+)
+
 const DEBUG = true
 
 const UP = 0
 const RIGHT = 1
 const DOWN = 2
 const LEFT = 3
+
+func ParseIntOrExit(number string) int {
+	steps, err := strconv.Atoi(number)
+	if err != nil {
+		fmt.Println("Error parsing number:", number, err)
+		os.Exit(1)
+	}
+	return steps
+}
+
+func ReadFileOrExit(path string) string {
+	// Open the file
+	file, err := os.Open(path)
+	if err != nil {
+		fmt.Println("Error opening file:", path, err)
+		os.Exit(1)
+	}
+	defer file.Close()
+	reader := io.Reader(file)
+	textBytes, err := io.ReadAll(reader)
+	if err != nil {
+		fmt.Println("Error opening file:", path, err)
+		os.Exit(1)
+	}
+	return string(textBytes)
+}
 
 func FindChar(char byte, matrix [][]byte) (int, int, bool) {
 	for r, row := range matrix {
