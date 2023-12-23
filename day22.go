@@ -7,8 +7,8 @@ import (
 
 func Day22() {
 
-	if len(os.Args) < 4 {
-		fmt.Println("Usage: aoc 22 <input part 1>")
+	if len(os.Args) < 3 {
+		fmt.Println("Usage: aoc 22 <input>")
 		os.Exit(1)
 	}
 

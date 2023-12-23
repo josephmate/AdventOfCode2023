@@ -5,9 +5,10 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 )
 
-const DEBUG = true
+const DEBUG = false
 
 const UP = 0
 const RIGHT = 1
@@ -76,4 +77,18 @@ func Min(a, b int) int {
 		return a
 	}
 	return b
+}
+
+func ParseAs2DMatrix(input string) [][]byte {
+	lines := strings.Split(input, "\n")
+	result := make([][]byte, 0)
+
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if trimmed != "" {
+			result = append(result, []byte(trimmed))
+		}
+	}
+
+	return result
 }
