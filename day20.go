@@ -20,7 +20,14 @@ func parseCommModRecords(input string) []CommModRecord {
 	records := make([]CommModRecord, 0)
 
 	for _, line := range lines {
-		parts := strings.Split(line, " -> ")
+		trimmedLine := strings.TrimSpace(line)
+		if trimmedLine == "" {
+			continue
+		}
+		if DEBUG {
+			fmt.Println("parseCommModRecords parsing line", trimmedLine)
+		}
+		parts := strings.Split(trimmedLine, " -> ")
 
 		name := parts[0]
 		destinations := strings.Split(parts[1], ", ")
@@ -59,7 +66,24 @@ type CommMod struct {
 	IsConjunction bool
 	Name          string
 	Outputs       []string
-	Inputs        map[string]int
+	Inputs        map[string]bool
+}
+
+func broadcast(queue *[]Signal, outputSignal bool, signaler string, outputs []string) {
+	for _, output := range outputs {
+		if DEBUG {
+			var lowHigh = "low"
+			if outputSignal {
+				lowHigh = "high"
+			}
+			fmt.Println("simulateCommModStep", signaler, "--", lowHigh, "-->", output)
+		}
+		*queue = append(*queue, Signal{
+			Signaler: signaler,
+			Signalee: output,
+			IsHigh:   outputSignal,
+		})
+	}
 }
 
 func simulateCommModStep(lookupMap *map[string]*CommMod) (int, int) {
@@ -91,48 +115,23 @@ func simulateCommModStep(lookupMap *map[string]*CommMod) (int, int) {
 			if !currentSignal.IsHigh {
 				commMod.IsFlipFlopOn = !commMod.IsFlipFlopOn
 				outputSignal := commMod.IsFlipFlopOn
-				for _, output := range commMod.Outputs {
-					if DEBUG {
-						var lowHigh = "low"
-						if outputSignal {
-							lowHigh = "high"
-						}
-						fmt.Println("simulateCommModStep", currentSignal.Signalee, "->", output, lowHigh)
-					}
-					queue = append(queue, Signal{
-						Signaler: currentSignal.Signalee,
-						Signalee: output,
-						IsHigh:   outputSignal,
-					})
-				}
+				broadcast(&queue, outputSignal, currentSignal.Signalee, commMod.Outputs)
 			}
 		} else if commMod.IsConjunction {
 			// modify the incoming signal
 			commMod.Inputs[currentSignal.Signaler] = currentSignal.IsHigh
 			// check if all low
-			var anyTrue = false
-			// TODO: continue here
-			// for key := range
-		} else { // broadcast
-			outputSignal := false
-			for _, output := range commMod.Outputs {
-				if DEBUG {
-					var lowHigh = "low"
-					if outputSignal {
-						lowHigh = "high"
-					}
-					fmt.Println("simulateCommModStep", currentSignal.Signalee, "->", output, lowHigh)
-				}
-				queue = append(queue, Signal{
-					Signaler: currentSignal.Signalee,
-					Signalee: output,
-					IsHigh:   outputSignal,
-				})
+			var allTrue = true
+			for key := range commMod.Inputs {
+				allTrue = allTrue && commMod.Inputs[key]
 			}
+			broadcast(&queue, !allTrue, currentSignal.Signalee, commMod.Outputs)
+		} else { // broadcast
+			broadcast(&queue, false, currentSignal.Signalee, commMod.Outputs)
 		}
 	}
 
-	return 0, 0
+	return lowCount, highCount
 }
 
 func simulate1000(commModRecords []CommModRecord) int {
@@ -143,15 +142,24 @@ func simulate1000(commModRecords []CommModRecord) int {
 			IsFlipFlop:    commModRec.IsFlipFlop,
 			IsConjunction: commModRec.IsConjunction,
 			Name:          commModRec.Name,
+			Inputs:        map[string]bool{},
+			Outputs:       commModRec.Destinations,
 		}
 	}
+	if DEBUG {
+		fmt.Println("simulate1000", "lookUpMap", lookUpMap)
+	}
 
-	// hook up everything as a graph
+	// fill in Outpus
 	for _, commModRec := range commModRecords {
 		commMod := lookUpMap[commModRec.Name]
 		for _, output := range commModRec.Destinations {
-			outputCommMod := lookUpMap[output]
-			commMod.Outputs = append(commMod.Outputs, outputCommMod)
+			outputCommMod, hasIt := lookUpMap[output]
+			if hasIt {
+				if outputCommMod.IsConjunction {
+					outputCommMod.Inputs[commMod.Name] = false
+				}
+			}
 		}
 	}
 
@@ -161,6 +169,7 @@ func simulate1000(commModRecords []CommModRecord) int {
 		lows, highs := simulateCommModStep(&lookUpMap)
 		lowPulses += lows
 		highPulses += highs
+		fmt.Println("simulate1000", "step", i, "lowPulses", lowPulses, "highPulses", highPulses)
 	}
 
 	return lowPulses * highPulses
