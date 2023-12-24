@@ -61,7 +61,7 @@ t = xb0 - xa0
 			xav - xbv
 
 when y's intersect
-ya0 + yav + t = yb0 + ybv * t
+ya0 + yav * t = yb0 + ybv * t
 t = yb0 - ya0
 
 	    ---------
@@ -89,7 +89,7 @@ func has2DCollision(a HailRecord, b HailRecord, lowerBound int64, upperBound int
 	timeUsingXs := calculateTime(a, b, 0)
 	timeUsingYs := calculateTime(a, b, 1)
 	x := calcPosn(a, timeUsingXs, 0)
-	y := calcPosn(a, timeUsingXs, 1)
+	y := calcPosn(a, timeUsingYs, 1)
 
 	if DEBUG {
 		fmt.Println("has2DCollision", "a=", a, "b=", b, "timeUsingXs=", timeUsingXs, "timeUsingYs=", timeUsingYs, "x=", x, "y=", y)
@@ -102,12 +102,19 @@ func has2DCollision(a HailRecord, b HailRecord, lowerBound int64, upperBound int
 		y >= float64(lowerBound) && y <= float64(upperBound)
 }
 
+/*
+Need to find the collision of paths/lines, not objects. Ooooops!
+*/
+func has2DPathCollision(a HailRecord, b HailRecord, lowerBound int64, upperBound int64) bool {
+	return false
+}
+
 func count2DCollisions(hailRecords []HailRecord, lowerBound int64, upperBound int64) int64 {
 	var count int64 = 0
 
 	for i := 0; i < len(hailRecords); i++ {
 		for j := i + 1; j < len(hailRecords); j++ {
-			if has2DCollision(hailRecords[i], hailRecords[j], lowerBound, upperBound) {
+			if has2DPathCollision(hailRecords[i], hailRecords[j], lowerBound, upperBound) {
 				count++
 			}
 		}
