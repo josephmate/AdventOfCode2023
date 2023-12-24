@@ -24,6 +24,15 @@ func ParseIntOrExit(number string) int {
 	return steps
 }
 
+func ParseInt64OrExit(number string) int64 {
+	num, err := strconv.ParseInt(number, 10, 64)
+	if err != nil {
+		fmt.Println(number, "Error:", err)
+		os.Exit(1)
+	}
+	return num
+}
+
 func ReadFileOrExit(path string) string {
 	// Open the file
 	file, err := os.Open(path)
