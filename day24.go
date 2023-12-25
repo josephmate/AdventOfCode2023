@@ -178,7 +178,7 @@ func has2DPathCollision(a HailRecord, b HailRecord, lowerBound int64, upperBound
 					(v0y/v0x - v1y/v1x)
 	*/
 	x := ((float64(b.Position[1]) - float64(b.Velocity[1])/float64(b.Velocity[0])*float64(b.Position[0])) -
-		float64(a.Position[1]) - float64(a.Velocity[1])/float64(a.Velocity[0])*float64(a.Position[0])) /
+		(float64(a.Position[1]) - float64(a.Velocity[1])/float64(a.Velocity[0])*float64(a.Position[0]))) /
 		(float64(a.Velocity[1])/float64(a.Velocity[0]) - float64(b.Velocity[1])/float64(b.Velocity[0]))
 
 	/*
@@ -192,10 +192,11 @@ func has2DPathCollision(a HailRecord, b HailRecord, lowerBound int64, upperBound
 					---------
 						xv
 	*/
-	t := (x - float64(a.Position[0])) / float64(a.Velocity[0])
+	ta := (x - float64(a.Position[0])) / float64(a.Velocity[0])
+	tb := (x - float64(b.Position[0])) / float64(b.Velocity[0])
 
 	if DEBUG {
-		fmt.Println("has2DPathCollision", "a:", a, "b:", b, "x:", x, "y:", y, "t:", t)
+		fmt.Println("has2DPathCollision", "a:", a, "b:", b, "x:", x, "y:", y, "ta:", ta, "tb:", tb)
 	}
 
 	if math.IsInf(x, 1) || math.IsInf(x, -1) {
@@ -208,7 +209,7 @@ func has2DPathCollision(a HailRecord, b HailRecord, lowerBound int64, upperBound
 		return false
 	}
 
-	return t >= 0
+	return ta >= 0 && tb >= 0
 }
 
 func count2DCollisions(hailRecords []HailRecord, lowerBound int64, upperBound int64) int64 {
