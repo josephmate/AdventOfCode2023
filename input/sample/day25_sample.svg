@@ -1,0 +1,262 @@
+<?xml version="1.0" standalone="no"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="582pt" height="404pt" viewBox="0.00 0.00 582.00 404.00">
+<g id="graph0" class="graph" transform="translate(4,400) scale(1)" data-name="Connected_Components">
+
+<polygon fill="white" stroke="none" points="-4,4 -4,-400 578,-400 578,4 -4,4" style=""/>
+<!-- jqt -->
+<g id="node1" class="node" pointer-events="visible" data-name="jqt">
+
+<ellipse fill="none" stroke="black" cx="82" cy="-306" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="82" y="-301.8" font-family="Times,serif" font-size="14.00" style="">jqt</text>
+</g>
+<!-- rhn -->
+<g id="node2" class="node" pointer-events="visible" data-name="rhn">
+
+<ellipse fill="none" stroke="black" cx="82" cy="-234" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="82" y="-229.8" font-family="Times,serif" font-size="14.00" style="">rhn</text>
+</g>
+<!-- jqt&#45;&#45;rhn -->
+<g id="edge1" class="edge" data-name="jqt--rhn">
+
+<path fill="none" stroke="black" d="M82,-287.7C82,-276.85 82,-262.92 82,-252.1" style=""/>
+</g>
+<!-- xhk -->
+<g id="node3" class="node" pointer-events="visible" data-name="xhk">
+
+<ellipse fill="none" stroke="black" cx="27" cy="-90" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="27" y="-85.8" font-family="Times,serif" font-size="14.00" style="">xhk</text>
+</g>
+<!-- jqt&#45;&#45;xhk -->
+<g id="edge2" class="edge" data-name="jqt--xhk">
+
+<path fill="none" stroke="black" d="M68.81,-289.88C60.83,-279.83 51.21,-265.97 46,-252 27.41,-202.16 25.91,-138.16 26.4,-108.07" style=""/>
+</g>
+<!-- nvd -->
+<g id="node4" class="node" pointer-events="visible" data-name="nvd">
+
+<ellipse fill="none" stroke="black" cx="323" cy="-90" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="323" y="-85.8" font-family="Times,serif" font-size="14.00" style="">nvd</text>
+</g>
+<!-- jqt&#45;&#45;nvd -->
+<g id="edge3" class="edge" data-name="jqt--nvd">
+
+<path fill="none" stroke="black" d="M97.81,-290.96C141.48,-252.18 263.39,-143.93 307.13,-105.09" style=""/>
+</g>
+<!-- rhn&#45;&#45;xhk -->
+<g id="edge12" class="edge" data-name="rhn--xhk">
+
+<path fill="none" stroke="black" d="M75.47,-216.15C64.89,-188.82 44.1,-135.14 33.52,-107.82" style=""/>
+</g>
+<!-- hfx -->
+<g id="node9" class="node" pointer-events="visible" data-name="hfx">
+
+<ellipse fill="none" stroke="black" cx="137" cy="-18" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="137" y="-13.8" font-family="Times,serif" font-size="14.00" style="">hfx</text>
+</g>
+<!-- rhn&#45;&#45;hfx -->
+<g id="edge14" class="edge" data-name="rhn--hfx">
+
+<path fill="none" stroke="black" d="M85.29,-215.86C88.83,-197.87 94.78,-168.83 101,-144 110.76,-105.01 124.35,-59.81 131.73,-35.88" style=""/>
+</g>
+<!-- bvb -->
+<g id="node13" class="node" pointer-events="visible" data-name="bvb">
+
+<ellipse fill="none" stroke="black" cx="137" cy="-162" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="137" y="-157.8" font-family="Times,serif" font-size="14.00" style="">bvb</text>
+</g>
+<!-- rhn&#45;&#45;bvb -->
+<g id="edge13" class="edge" data-name="rhn--bvb">
+
+<path fill="none" stroke="black" d="M94.21,-217.46C103.32,-205.86 115.72,-190.08 124.83,-178.49" style=""/>
+</g>
+<!-- xhk&#45;&#45;hfx -->
+<g id="edge7" class="edge" data-name="xhk--hfx">
+
+<path fill="none" stroke="black" d="M46.16,-76.81C66.35,-63.96 97.95,-43.85 118.06,-31.05" style=""/>
+</g>
+<!-- lhk -->
+<g id="node12" class="node" pointer-events="visible" data-name="lhk">
+
+<ellipse fill="none" stroke="black" cx="369" cy="-18" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="369" y="-13.8" font-family="Times,serif" font-size="14.00" style="">lhk</text>
+</g>
+<!-- nvd&#45;&#45;lhk -->
+<g id="edge25" class="edge" data-name="nvd--lhk">
+
+<path fill="none" stroke="black" d="M333.44,-73.12C340.97,-61.66 351.08,-46.26 358.6,-34.82" style=""/>
+</g>
+<!-- rsh -->
+<g id="node5" class="node" pointer-events="visible" data-name="rsh">
+
+<ellipse fill="none" stroke="black" cx="454" cy="-306" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="454" y="-301.8" font-family="Times,serif" font-size="14.00" style="">rsh</text>
+</g>
+<!-- frs -->
+<g id="node6" class="node" pointer-events="visible" data-name="frs">
+
+<ellipse fill="none" stroke="black" cx="418" cy="-234" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="418" y="-229.8" font-family="Times,serif" font-size="14.00" style="">frs</text>
+</g>
+<!-- rsh&#45;&#45;frs -->
+<g id="edge4" class="edge" data-name="rsh--frs">
+
+<path fill="none" stroke="black" d="M445.65,-288.76C439.83,-277.46 432.11,-262.44 426.3,-251.15" style=""/>
+</g>
+<!-- pzl -->
+<g id="node7" class="node" pointer-events="visible" data-name="pzl">
+
+<ellipse fill="none" stroke="black" cx="490" cy="-234" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="490" y="-229.8" font-family="Times,serif" font-size="14.00" style="">pzl</text>
+</g>
+<!-- rsh&#45;&#45;pzl -->
+<g id="edge5" class="edge" data-name="rsh--pzl">
+
+<path fill="none" stroke="black" d="M462.35,-288.76C468.17,-277.46 475.89,-262.44 481.7,-251.15" style=""/>
+</g>
+<!-- lsr -->
+<g id="node8" class="node" pointer-events="visible" data-name="lsr">
+
+<ellipse fill="none" stroke="black" cx="547" cy="-162" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="547" y="-157.8" font-family="Times,serif" font-size="14.00" style="">lsr</text>
+</g>
+<!-- rsh&#45;&#45;lsr -->
+<g id="edge6" class="edge" data-name="rsh--lsr">
+
+<path fill="none" stroke="black" d="M475.54,-294.52C491.84,-285.49 513.51,-270.91 526,-252 540.44,-230.15 544.99,-199.49 546.4,-180.46" style=""/>
+</g>
+<!-- frs&#45;&#45;lsr -->
+<g id="edge33" class="edge" data-name="frs--lsr">
+
+<path fill="none" stroke="black" d="M438.44,-221.91C462.6,-208.8 502.54,-187.12 526.66,-174.04" style=""/>
+</g>
+<!-- qnr -->
+<g id="node11" class="node" pointer-events="visible" data-name="qnr">
+
+<ellipse fill="none" stroke="black" cx="361" cy="-162" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="361" y="-157.8" font-family="Times,serif" font-size="14.00" style="">qnr</text>
+</g>
+<!-- frs&#45;&#45;qnr -->
+<g id="edge31" class="edge" data-name="frs--qnr">
+
+<path fill="none" stroke="black" d="M405.63,-217.81C396.07,-206.07 382.9,-189.89 373.34,-178.16" style=""/>
+</g>
+<!-- frs&#45;&#45;lhk -->
+<g id="edge32" class="edge" data-name="frs--lhk">
+
+<path fill="none" stroke="black" d="M414.07,-215.85C404.9,-175.78 382.14,-76.38 372.95,-36.23" style=""/>
+</g>
+<!-- pzl&#45;&#45;nvd -->
+<g id="edge19" class="edge" data-name="pzl--nvd">
+
+<path fill="none" stroke="black" d="M476.09,-218.47C458.4,-200.28 426.58,-168.54 397,-144 379,-129.07 357.08,-113.69 341.79,-103.37" style=""/>
+</g>
+<!-- pzl&#45;&#45;lsr -->
+<g id="edge17" class="edge" data-name="pzl--lsr">
+
+<path fill="none" stroke="black" d="M502.37,-217.81C511.93,-206.07 525.1,-189.89 534.66,-178.16" style=""/>
+</g>
+<!-- pzl&#45;&#45;hfx -->
+<g id="edge18" class="edge" data-name="pzl--hfx">
+
+<path fill="none" stroke="black" d="M481.92,-216.33C464.63,-182.63 420.52,-106.69 359,-72 295.14,-36 207.64,-24.35 164.02,-20.66" style=""/>
+</g>
+<!-- lsr&#45;&#45;lhk -->
+<g id="edge26" class="edge" data-name="lsr--lhk">
+
+<path fill="none" stroke="black" d="M530.25,-147.64C496.33,-120.58 419.83,-59.55 385.83,-32.43" style=""/>
+</g>
+<!-- cmg -->
+<g id="node10" class="node" pointer-events="visible" data-name="cmg">
+
+<ellipse fill="none" stroke="black" cx="307" cy="-234" rx="27.83" ry="18" style=""/>
+<text text-anchor="middle" x="307" y="-229.8" font-family="Times,serif" font-size="14.00" style="">cmg</text>
+</g>
+<!-- cmg&#45;&#45;nvd -->
+<g id="edge9" class="edge" data-name="cmg--nvd">
+
+<path fill="none" stroke="black" d="M308.96,-215.59C312.05,-188.19 318.01,-135.32 321.07,-108.11" style=""/>
+</g>
+<!-- cmg&#45;&#45;qnr -->
+<g id="edge8" class="edge" data-name="cmg--qnr">
+
+<path fill="none" stroke="black" d="M318.98,-217.46C327.93,-205.86 340.11,-190.08 349.05,-178.49" style=""/>
+</g>
+<!-- cmg&#45;&#45;lhk -->
+<g id="edge10" class="edge" data-name="cmg--lhk">
+
+<path fill="none" stroke="black" d="M299.03,-216.75C285.32,-186.31 261.14,-119.5 287,-72 299.24,-49.52 325.57,-35.12 345.11,-27.09" style=""/>
+</g>
+<!-- cmg&#45;&#45;bvb -->
+<g id="edge11" class="edge" data-name="cmg--bvb">
+
+<path fill="none" stroke="black" d="M284.07,-223.56C251.45,-210.12 191.99,-185.64 159.56,-172.29" style=""/>
+</g>
+<!-- qnr&#45;&#45;nvd -->
+<g id="edge20" class="edge" data-name="qnr--nvd">
+
+<path fill="none" stroke="black" d="M352.19,-144.76C346.05,-133.46 337.89,-118.44 331.77,-107.15" style=""/>
+</g>
+<!-- bvb&#45;&#45;xhk -->
+<g id="edge15" class="edge" data-name="bvb--xhk">
+
+<path fill="none" stroke="black" d="M117.84,-148.81C97.65,-135.96 66.05,-115.85 45.94,-103.05" style=""/>
+</g>
+<!-- bvb&#45;&#45;hfx -->
+<g id="edge16" class="edge" data-name="bvb--hfx">
+
+<path fill="none" stroke="black" d="M137,-143.59C137,-116.19 137,-63.32 137,-36.11" style=""/>
+</g>
+<!-- ntq -->
+<g id="node14" class="node" pointer-events="visible" data-name="ntq">
+
+<ellipse fill="none" stroke="black" cx="110" cy="-378" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="110" y="-373.8" font-family="Times,serif" font-size="14.00" style="">ntq</text>
+</g>
+<!-- ntq&#45;&#45;jqt -->
+<g id="edge21" class="edge" data-name="ntq--jqt">
+
+<path fill="none" stroke="black" d="M103.36,-360.41C98.9,-349.25 93.04,-334.6 88.59,-323.47" style=""/>
+</g>
+<!-- ntq&#45;&#45;xhk -->
+<g id="edge24" class="edge" data-name="ntq--xhk">
+
+<path fill="none" stroke="black" d="M89.75,-365.51C75.26,-356.2 56.53,-341.74 46,-324 4.16,-253.5 16.52,-149.19 23.59,-108.32" style=""/>
+</g>
+<!-- ntq&#45;&#45;hfx -->
+<g id="edge22" class="edge" data-name="ntq--hfx">
+
+<path fill="none" stroke="black" d="M125.04,-362.83C148.71,-338.92 192,-287.95 192,-235 192,-235 192,-235 192,-161 192,-112.36 163.59,-60.28 147.6,-34.84" style=""/>
+</g>
+<!-- ntq&#45;&#45;bvb -->
+<g id="edge23" class="edge" data-name="ntq--bvb">
+
+<path fill="none" stroke="black" d="M112.73,-359.83C114.35,-349.47 116.39,-335.99 118,-324 125.01,-271.84 131.92,-209.97 135.13,-180.42" style=""/>
+</g>
+<!-- rzs -->
+<g id="node15" class="node" pointer-events="visible" data-name="rzs">
+
+<ellipse fill="none" stroke="black" cx="408" cy="-378" rx="27" ry="18" style=""/>
+<text text-anchor="middle" x="408" y="-373.8" font-family="Times,serif" font-size="14.00" style="">rzs</text>
+</g>
+<!-- rzs&#45;&#45;rsh -->
+<g id="edge30" class="edge" data-name="rzs--rsh">
+
+<path fill="none" stroke="black" d="M418.44,-361.12C425.97,-349.66 436.08,-334.26 443.6,-322.82" style=""/>
+</g>
+<!-- rzs&#45;&#45;lsr -->
+<g id="edge29" class="edge" data-name="rzs--lsr">
+
+<path fill="none" stroke="black" d="M429.59,-366.57C463.47,-348.73 527.27,-308.71 547,-252 555.28,-228.21 553.01,-198.64 550.28,-180.29" style=""/>
+</g>
+<!-- rzs&#45;&#45;cmg -->
+<g id="edge28" class="edge" data-name="rzs--cmg">
+
+<path fill="none" stroke="black" d="M390.27,-364.16C377.55,-354.28 360.68,-339.68 349,-324 332.06,-301.25 319.43,-270.58 312.64,-251.83" style=""/>
+</g>
+<!-- rzs&#45;&#45;qnr -->
+<g id="edge27" class="edge" data-name="rzs--qnr">
+
+<path fill="none" stroke="black" d="M404.23,-359.85C395.43,-319.78 373.6,-220.38 364.78,-180.23" style=""/>
+</g>
+</g>
+</svg>

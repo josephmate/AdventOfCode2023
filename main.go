@@ -43,6 +43,9 @@ func main() {
 		Day10()
 	} else if day == "11" {
 		Day11()
+	} else if day == "12" {
+		fmt.Println(day, "not implemented yet.")
+		os.Exit(1)
 	} else if day == "13" {
 		Day13()
 	} else if day == "14" {
@@ -55,6 +58,9 @@ func main() {
 		Day17()
 	} else if day == "18" {
 		Day18()
+	} else if day == "19" {
+		fmt.Println(day, "not implemented yet.")
+		os.Exit(1)
 	} else if day == "20" {
 		Day20()
 	} else if day == "21" {
@@ -65,6 +71,8 @@ func main() {
 		Day23()
 	} else if day == "24" {
 		Day24()
+	} else if day == "25" {
+		Day25()
 	} else {
 		fmt.Println(day, "is not recognized.")
 		os.Exit(1)

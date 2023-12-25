@@ -101,3 +101,13 @@ func ParseAs2DMatrix(input string) [][]byte {
 
 	return result
 }
+
+func RemoveStr(arr []string, removee string) []string {
+	var result []string
+	for _, str := range arr {
+		if str != removee {
+			result = append(result, str)
+		}
+	}
+	return result
+}
