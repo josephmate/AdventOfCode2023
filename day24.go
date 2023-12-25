@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"math"
 	"os"
 	"strconv"
 	"strings"
@@ -104,9 +105,110 @@ func has2DCollision(a HailRecord, b HailRecord, lowerBound int64, upperBound int
 
 /*
 Need to find the collision of paths/lines, not objects. Ooooops!
+
+equation of line is
+
+y = mx + b
+
+where y is the y coord given some value on the x axis
+
+m is the slope of the line (rise over run)
+
+b is the y intercept (when x = 0)
+
+m is vy/vx (rise over run)
+
+where
+
+vy is the y velocity
+
+vx is the x velocity
+
+b = y - mx
+
+b = py - (vy/vx)px
+
+where
+
+py is the initial y
+
+px is the initial x
+
+putting that altogether is:
+
+y = (vy/vx) * x + (py - (vy/vx)px)
+
+now we have two equations of lines and we want to know the _x_ value where the ys are equal
+
+(v0y/v0x) * _x_ + (p0y - (v0y/v0x)p0x) = (v1y/v1x) * _x_ + (p1y - (v1y/v1x)p1x)
+
+solve for x
+
+(v0y/v0x - v1y/v1x)_x_ = (p1y - (v1y/v1x)p1x) - (p0y - (v0y/v0x)p0x)
+
+_x_ = (p1y - (v1y/v1x)p1x) - (p0y - (v0y/v0x)p0x)
+
+	      -------------------------------------------
+				(v0y/v0x - v1y/v1x)
+
+we can use the y=mx+b to find the y value
+
+just need to check both this x and y values are within the bounding rectangle
+
+we also need to check that the time is not negative
+
+recall from an early attempt the relationship between x and time (x(t) and t)
+
+x(t) = x0 + xv * t
+
+solving for t
+
+t = x(t) - x0
+
+	    ---------
+			   xv
+
+need to check if that is positive
 */
 func has2DPathCollision(a HailRecord, b HailRecord, lowerBound int64, upperBound int64) bool {
-	return false
+	/*
+		_x_ = (p1y - (v1y/v1x)p1x) - (p0y - (v0y/v0x)p0x)
+
+		      -------------------------------------------
+					(v0y/v0x - v1y/v1x)
+	*/
+	x := ((float64(b.Position[1]) - float64(b.Velocity[1])/float64(b.Velocity[0])*float64(b.Position[0])) -
+		float64(a.Position[1]) - float64(a.Velocity[1])/float64(a.Velocity[0])*float64(a.Position[0])) /
+		(float64(a.Velocity[1])/float64(a.Velocity[0]) - float64(b.Velocity[1])/float64(b.Velocity[0]))
+
+	/*
+		y = (vy/vx) * x + (py - (vy/vx)px)
+	*/
+	y := float64(a.Velocity[1])/float64(a.Velocity[0])*x + (float64(a.Position[1]) - float64(a.Velocity[1])/float64(a.Velocity[0])*float64(a.Position[0]))
+
+	/*
+		t = x(t) - x0
+
+					---------
+						xv
+	*/
+	t := (x - float64(a.Position[0])) / float64(a.Velocity[0])
+
+	if DEBUG {
+		fmt.Println("has2DPathCollision", "a:", a, "b:", b, "x:", x, "y:", y, "t:", t)
+	}
+
+	if math.IsInf(x, 1) || math.IsInf(x, -1) {
+		return false
+	}
+
+	if !(x >= float64(lowerBound) && x <= float64(upperBound)) ||
+		!(y >= float64(lowerBound) && y <= float64(upperBound)) {
+		// out of bounds
+		return false
+	}
+
+	return t >= 0
 }
 
 func count2DCollisions(hailRecords []HailRecord, lowerBound int64, upperBound int64) int64 {
