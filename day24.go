@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"math"
 	"os"
@@ -147,7 +148,6 @@ solve for x
 (v0y/v0x - v1y/v1x)_x_ = (p1y - (v1y/v1x)p1x) - (p0y - (v0y/v0x)p0x)
 
 _x_ = (p1y - (v1y/v1x)p1x) - (p0y - (v0y/v0x)p0x)
-
 	      -------------------------------------------
 				(v0y/v0x - v1y/v1x)
 
@@ -164,7 +164,6 @@ x(t) = x0 + xv * t
 solving for t
 
 t = x(t) - x0
-
 	    ---------
 			   xv
 
@@ -173,7 +172,6 @@ need to check if that is positive
 func has2DPathCollision(a HailRecord, b HailRecord, lowerBound int64, upperBound int64) bool {
 	/*
 		_x_ = (p1y - (v1y/v1x)p1x) - (p0y - (v0y/v0x)p0x)
-
 		      -------------------------------------------
 					(v0y/v0x - v1y/v1x)
 	*/
@@ -188,7 +186,6 @@ func has2DPathCollision(a HailRecord, b HailRecord, lowerBound int64, upperBound
 
 	/*
 		t = x(t) - x0
-
 					---------
 						xv
 	*/
@@ -226,6 +223,86 @@ func count2DCollisions(hailRecords []HailRecord, lowerBound int64, upperBound in
 	return count
 }
 
+func printObj(hailRecords []HailRecord) {
+	if !DEBUG {
+		return
+	}
+	file, err := os.Create("obj.obj")
+	if err != nil {
+		fmt.Println("Could not open dot.dot")
+		return
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+
+	for _, record := range hailRecords {
+		v1 := [3]int64{}
+		v2 := [3]int64{}
+		for i := 0; i < 3; i++ {
+			v1[i] = record.Position[i] + 100000 * record.Velocity[i]
+			v2[i] = record.Position[i] - 100000 * record.Velocity[i]
+		}
+		_, err := fmt.Fprintf(writer, "%d %d %d %d %d %d\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2])
+		if err != nil {
+			fmt.Println("Could not write to dot.dot")
+			return
+		}
+	}
+}
+
+/*
+    x(t) = x_0 + t * x_v
+    y(t) = y_0 + t * y_v
+    z(t) = z_0 + t * z_v
+
+We will add systems of equations until we have enough to solve for unknown
+
+First one is for the one we're throwing
+
+    x_t(t) = x_h_0 + t * x_h_v
+    y_t(t) = y_h_0 + t * y_h_v
+    z_t(t) = z_h_0 + t * z_h_v
+
+We have 6 unknowns to solve in the above. Let see what happens when we add one of the hailstones from the list
+figuring out a collision point:
+
+    x_t(t) = x_a_0 + t * x_a_v
+    y_t(t) = y_a_0 + t * y_a_v
+    z_t(t) = z_a_0 + t * z_a_v
+
+Setting them equal we get:
+
+	  x_h_0 + t_h_a * x_h_v = x_a_0 + t_h_a * x_a_v
+	  y_h_0 + t_h_a * y_h_v = y_a_0 + t_h_a * y_a_v
+	  z_h_0 + t_h_a * z_h_v = z_a_0 + t_h_a * z_a_v
+
+We added 3 equations and added 1 unknown (time when they collide). Giving us a delta of 2 equations.
+So we need the equations from 3 collisions:
+
+	  x_h_0 + t_h_a * x_h_v = x_a_0 + t_h_a * x_a_v
+	  y_h_0 + t_h_a * y_h_v = y_a_0 + t_h_a * y_a_v
+	  z_h_0 + t_h_a * z_h_v = z_a_0 + t_h_a * z_a_v
+	  x_h_0 + t_h_b * x_h_v = x_b_0 + t_h_b * x_b_v
+	  y_h_0 + t_h_b * y_h_v = y_b_0 + t_h_b * y_b_v
+	  z_h_0 + t_h_b * z_h_v = z_b_0 + t_h_b * z_b_v
+	  x_h_0 + t_h_c * x_h_v = x_c_0 + t_h_c * x_c_v
+	  y_h_0 + t_h_c * y_h_v = y_c_0 + t_h_c * y_c_v
+	  z_h_0 + t_h_c * z_h_v = z_c_0 + t_h_c * z_c_v
+
+While trying to convert this system into a matrix,
+I noticed that the system isn't linear because we have two unknowns multiplied by each other like
+t_h_a * x_h_v.
+
+I'm going to try to generate an .obj model from these co-ordinates and see if I can visually find
+the line by openning it in a obj viewer.
+*/
+func hitAllHailstones(hailRecords []HailRecord) int64 {
+	printObj(hailRecords)
+	return 0
+}
+
 func Day24() {
 
 	if len(os.Args) < 5 {
@@ -252,4 +329,5 @@ func Day24() {
 	fmt.Println(count2DCollisions(hailRecords, lowerbound, upperbound))
 
 	fmt.Println("Part 2:")
+	fmt.Println(hitAllHailstones(hailRecords))
 }
