@@ -237,17 +237,56 @@ func printObj(hailRecords []HailRecord) {
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
 
+	
+	var hailRecordCoords [][3][2][3][3]int64
 	for _, record := range hailRecords {
-		v1 := [3]int64{}
-		v2 := [3]int64{}
-		for i := 0; i < 3; i++ {
-			v1[i] = record.Position[i] + 100000 * record.Velocity[i]
-			v2[i] = record.Position[i] - 100000 * record.Velocity[i]
+		const width = 2
+		const length = 200000
+		faces := [3][2][3][3]int64{}
+		for faceIdx := 0; faceIdx < 3; faceIdx++ {
+			for dimensionIdx := 0; dimensionIdx < 3; dimensionIdx++ {
+				if faceIdx == dimensionIdx {
+					faces[faceIdx][0][0][dimensionIdx] = record.Position[dimensionIdx] + (length/2) * record.Velocity[dimensionIdx] - (width/2)
+					faces[faceIdx][0][1][dimensionIdx] = record.Position[dimensionIdx] - (length/2) * record.Velocity[dimensionIdx] - (width/2)
+					faces[faceIdx][0][2][dimensionIdx] = record.Position[dimensionIdx] - (length/2) * record.Velocity[dimensionIdx] + (width/2)
+					faces[faceIdx][1][0][dimensionIdx] = record.Position[dimensionIdx] - (length/2) * record.Velocity[dimensionIdx] + (width/2)
+					faces[faceIdx][1][1][dimensionIdx] = record.Position[dimensionIdx] + (length/2) * record.Velocity[dimensionIdx] + (width/2)
+					faces[faceIdx][1][2][dimensionIdx] = record.Position[dimensionIdx] + (length/2) * record.Velocity[dimensionIdx] - (width/2)
+				} else {
+					faces[faceIdx][0][0][dimensionIdx] = record.Position[dimensionIdx] + (length/2) * record.Velocity[dimensionIdx]
+					faces[faceIdx][0][1][dimensionIdx] = record.Position[dimensionIdx] - (length/2) * record.Velocity[dimensionIdx]
+					faces[faceIdx][0][2][dimensionIdx] = record.Position[dimensionIdx] - (length/2) * record.Velocity[dimensionIdx]
+					faces[faceIdx][1][0][dimensionIdx] = record.Position[dimensionIdx] - (length/2) * record.Velocity[dimensionIdx]
+					faces[faceIdx][1][1][dimensionIdx] = record.Position[dimensionIdx] + (length/2) * record.Velocity[dimensionIdx]
+					faces[faceIdx][1][2][dimensionIdx] = record.Position[dimensionIdx] + (length/2) * record.Velocity[dimensionIdx]
+				}
+			}
 		}
-		_, err := fmt.Fprintf(writer, "%d %d %d %d %d %d\n", v1[0], v1[1], v1[2], v2[0], v2[1], v2[2])
-		if err != nil {
-			fmt.Println("Could not write to dot.dot")
-			return
+		hailRecordCoords = append(hailRecordCoords, faces)
+	}
+	for _, hailRecordCoord := range hailRecordCoords {
+		for _, face := range hailRecordCoord {
+			for _, triangle := range face {
+				for _, vertex := range triangle {
+					fmt.Fprintf(writer, "v");
+					for _, dimension := range vertex {
+						fmt.Fprintf(writer, " %d", dimension)
+					}
+					fmt.Fprintf(writer, "\n");
+				}
+			}
+		}
+	}
+	
+	for a, hailRecordCoord := range hailRecordCoords {
+		for i, face := range hailRecordCoord {
+			for j, triangle := range face {
+				fmt.Fprintf(writer, "f");
+				for k, _ := range triangle {
+						fmt.Fprintf(writer, " %d", a * len(hailRecordCoord) * len(face) * len(triangle) + i * len(face) * len(triangle) + j * len(triangle) + k + 1)
+				}
+				fmt.Fprintf(writer, "\n");
+			}
 		}
 	}
 }
