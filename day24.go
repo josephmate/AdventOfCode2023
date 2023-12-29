@@ -223,10 +223,15 @@ func count2DCollisions(hailRecords []HailRecord, lowerBound int64, upperBound in
 	return count
 }
 
+func printVertex(writer *bufio.Writer, vertex [3]int64) {
+	fmt.Fprintf(writer, "v %f %f %f\n", float64(vertex[0])/100000.0,  float64(vertex[1])/100000.0,  float64(vertex[2])/100000.0)
+	//fmt.Fprintf(writer, "v %d %d %d\n", vertex[0], vertex[1], vertex[2])
+}
+
 func printObj(hailRecords []HailRecord) {
-	if !DEBUG {
-		return
-	}
+	// if !DEBUG {
+	// 	return
+	// }
 	file, err := os.Create("obj.obj")
 	if err != nil {
 		fmt.Println("Could not open dot.dot")
@@ -237,12 +242,36 @@ func printObj(hailRecords []HailRecord) {
 	writer := bufio.NewWriter(file)
 	defer writer.Flush()
 
+	mins := [3]int64{
+		hailRecords[0].Position[0],
+		hailRecords[0].Position[1],
+		hailRecords[0].Position[2],
+	}
+	maxes := [3]int64{
+		hailRecords[0].Position[0],
+		hailRecords[0].Position[1],
+		hailRecords[0].Position[2],
+	}
+	for _, record := range hailRecords {
+		for i := 0; i < 3; i++ {
+			if record.Position[i] < mins[i] {
+				mins[i] = record.Position[i]
+			}
+			if record.Position[i] > maxes[i] {
+				maxes[i] = record.Position[i]
+			}
+		}
+	}
+	fmt.Println("minX=",mins[0],"minY=",mins[1],"minZ=",mins[2],)
+	fmt.Println("maxX=",maxes[0],"maxY=",maxes[1],"maxZ=",maxes[2],)
+	fmt.Println("scaleX=",mins[0] + ((maxes[0] - mins[0])/2),"scaleY=",mins[1] + ((maxes[1] - mins[1])/2),"scaleZ=",mins[2] + ((maxes[2] - mins[2])/2),)
 	
 	var hailRecordCoords [][3][2][3][3]int64
-	for _, record := range hailRecords {
+	for recordIdx, record := range hailRecords {
 		const width = 2
-		const length = 200000
+		const length = 10000000
 		faces := [3][2][3][3]int64{}
+		fmt.Fprintf(writer, "o object %d\n", recordIdx)
 		for faceIdx := 0; faceIdx < 3; faceIdx++ {
 			for dimensionIdx := 0; dimensionIdx < 3; dimensionIdx++ {
 				if faceIdx == dimensionIdx {
@@ -261,11 +290,120 @@ func printObj(hailRecords []HailRecord) {
 					faces[faceIdx][1][2][dimensionIdx] = record.Position[dimensionIdx] + (length/2) * record.Velocity[dimensionIdx]
 				}
 			}
+			printVertex(writer, faces[faceIdx][0][0])
+			printVertex(writer, faces[faceIdx][0][1])
+			printVertex(writer, faces[faceIdx][0][2])
+			fmt.Fprintf(writer, "f -3 -2 -1\n")
+			printVertex(writer, faces[faceIdx][1][0])
+			printVertex(writer, faces[faceIdx][1][1])
+			printVertex(writer, faces[faceIdx][1][2])
+			fmt.Fprintf(writer, "f -3 -2 -1\n")
 		}
 		hailRecordCoords = append(hailRecordCoords, faces)
 	}
-	for _, hailRecordCoord := range hailRecordCoords {
-		for _, face := range hailRecordCoord {
+
+	// for _, hailRecordCoord := range hailRecordCoords {
+	// 	for _, face := range hailRecordCoord {
+	// 		for _, triangle := range face {
+	// 			for _, vertex := range triangle {
+	// 				fmt.Fprintf(writer, "v");
+	// 				for _, dimension := range vertex {
+	// 					var adjusted = dimension
+	// 					// centering around 0,0,0
+	// 					// adjusted = adjusted - mins[dimensionIdx] - ((maxes[dimensionIdx] - mins[dimensionIdx])/2)
+	// 					// scaling to fit in an integer
+	// 					//adjusted = adjusted/100000000
+	// 					fmt.Fprintf(writer, " %d", adjusted)
+	// 				}
+	// 				fmt.Fprintf(writer, "\n");
+	// 			}
+	// 		}
+	// 	}
+	// }
+	
+	// for a, hailRecordCoord := range hailRecordCoords {
+	// 	for i, face := range hailRecordCoord {
+	// 		for j, triangle := range face {
+	// 			fmt.Fprintf(writer, "f");
+	// 			for k, _ := range triangle {
+	// 					fmt.Fprintf(writer, " %d", a * len(hailRecordCoord) * len(face) * len(triangle) + i * len(face) * len(triangle) + j * len(triangle) + k + 1)
+	// 			}
+	// 			fmt.Fprintf(writer, "\n");
+	// 		}
+	// 	}
+	// }
+}
+
+/*
+I tried to generate a coord for each integer point and that slowed my computer to a crawl.
+func generateRectange(record HailRecord, length int64, width int64, faceIdx int) [][3]int64{
+	var vertices [][3]int64
+	// top line
+	for vertexIdx := -1*(length/2); vertexIdx < (length/2); vertexIdx++ {
+		vertex := [3]int64{}
+		for dimensionIdx := 0; dimensionIdx < 3; dimensionIdx++ {
+
+			if faceIdx == dimensionIdx {
+				vertex[dimensionIdx] = record.Position[dimensionIdx] + vertexIdx * record.Velocity[dimensionIdx] + width
+			} else {
+				vertex[dimensionIdx] = record.Position[dimensionIdx] + vertexIdx * record.Velocity[dimensionIdx]
+			}
+		}
+		vertices = append(vertices, vertex)
+	}
+	// bottom line
+	for vertexIdx := (length/2) -1; vertexIdx >= -1*(length/2); vertexIdx-- {
+		vertex := [3]int64{}
+		for dimensionIdx := 0; dimensionIdx < 3; dimensionIdx++ {
+				vertex[dimensionIdx] = record.Position[dimensionIdx] + vertexIdx * record.Velocity[dimensionIdx]
+		}
+		vertices = append(vertices, vertex)
+	}
+	return vertices
+}
+
+func printObj(hailRecords []HailRecord) {
+	// if !DEBUG {
+	// 	return
+	// }
+	file, err := os.Create("obj.obj")
+	if err != nil {
+		fmt.Println("Could not open dot.dot")
+		return
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+
+	
+	const width = 2
+	const length = 2000000
+	var hailStarLines [][3][2][][3]int64
+	for _, record := range hailRecords {
+		// o-------o--------o 
+		// |                |
+		// o-------o--------o
+		// |                |
+		// o-------o--------o
+
+		//          -- One face for each axis
+		//         /   -- Split the face into two rectangles
+		//         /  /   -- A vertex for each point on the rectangle
+		//         /  /  /   -- A point has 3 dimensions
+		//         /  /  /  /
+		var faces [3][2][][3]int64
+		for faceIdx := 0; faceIdx < 3; faceIdx++ {
+			vertices := [2][][3]int64{
+				generateRectange(record, length, (width/2), faceIdx),
+				generateRectange(record, length, -1*(width/2), faceIdx),
+			}
+			faces[faceIdx] = vertices
+		}
+		hailStarLines = append(hailStarLines, faces)
+	}
+	for _, hailStarLine := range hailStarLines {
+		for _, face := range hailStarLine {
 			for _, triangle := range face {
 				for _, vertex := range triangle {
 					fmt.Fprintf(writer, "v");
@@ -278,18 +416,19 @@ func printObj(hailRecords []HailRecord) {
 		}
 	}
 	
-	for a, hailRecordCoord := range hailRecordCoords {
-		for i, face := range hailRecordCoord {
+	for a, hailStarLine := range hailStarLines {
+		for i, face := range hailStarLine {
 			for j, triangle := range face {
 				fmt.Fprintf(writer, "f");
 				for k, _ := range triangle {
-						fmt.Fprintf(writer, " %d", a * len(hailRecordCoord) * len(face) * len(triangle) + i * len(face) * len(triangle) + j * len(triangle) + k + 1)
+						fmt.Fprintf(writer, " %d", a * len(hailStarLine) * len(face) * len(triangle) + i * len(face) * len(triangle) + j * len(triangle) + k + 1)
 				}
 				fmt.Fprintf(writer, "\n");
 			}
 		}
 	}
 }
+*/
 
 /*
     x(t) = x_0 + t * x_v
