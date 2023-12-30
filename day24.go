@@ -7,6 +7,8 @@ import (
 	"os"
 	"strconv"
 	"strings"
+
+	"github.com/davidkleiven/gononlin/nonlin"
 )
 
 type HailRecord struct {
@@ -229,9 +231,9 @@ func printVertex(writer *bufio.Writer, vertex [3]int64) {
 }
 
 func printObj(hailRecords []HailRecord) {
-	// if !DEBUG {
-	// 	return
-	// }
+	if !DEBUG {
+		return
+	}
 	file, err := os.Create("obj.obj")
 	if err != nil {
 		fmt.Println("Could not open dot.dot")
@@ -430,6 +432,7 @@ func printObj(hailRecords []HailRecord) {
 }
 */
 
+
 /*
     x(t) = x_0 + t * x_v
     y(t) = y_0 + t * y_v
@@ -475,10 +478,79 @@ t_h_a * x_h_v.
 
 I'm going to try to generate an .obj model from these co-ordinates and see if I can visually find
 the line by openning it in a obj viewer.
+
+Rendering it in blender worked well for the sample problem. It was immediately obvious where
+all the lines should collide. However for real input, blender always rendered the lines as a
+single point. I suspect the values were too large for blender to handle.
+
+My next attempt is to re-use the equations I have above and submit them to a non linear equation
+solver like "github.com/davidkleiven/gononlin/nonlin" and see if it gets a solution. This library
+requires all equations to be rearranged as 0 = on the left hand side. Also, all variables need to be
+of the form x[i].
+
+First lets re-arrange our questions to be 0= :
+
+	  0 = x_a_0 + t_h_a * x_a_v - x_h_0 -  t_h_a * x_h_v
+	  0 = y_a_0 + t_h_a * y_a_v - y_h_0 - t_h_a * y_h_v
+	  0 = z_a_0 + t_h_a * z_a_v - z_h_0 - t_h_a * z_h_v
+	  0 = x_b_0 + t_h_b * x_b_v - x_h_0 - t_h_b * x_h_v
+	  0 = y_b_0 + t_h_b * y_b_v - y_h_0 - t_h_b * y_h_v
+	  0 = z_b_0 + t_h_b * z_b_v - z_h_0 - t_h_b * z_h_v
+	  0 = x_c_0 + t_h_c * x_c_v - x_h_0 - t_h_c * x_h_v
+	  0 = y_c_0 + t_h_c * y_c_v - y_h_0 - t_h_c * y_h_v
+	  0 = z_c_0 + t_h_c * z_c_v - z_h_0 - t_h_c * z_h_v
 */
-func hitAllHailstones(hailRecords []HailRecord) int64 {
-	printObj(hailRecords)
-	return 0
+func hitAllHailstones(hailRecords []HailRecord) float64 {
+	
+	// intial positions of start throw will be x[0], x[1], x[2]
+	// velocity of throw will be x[3], x[4], x[5]
+	// the time of collision with hailstone i will be x[6+i]
+	// the 3 equation per hailstone will be out[i*3 + 0],out[i*3 + 1],out[i*3 + 2]
+
+	problem := nonlin.Problem{
+		F: func(out, x []float64) {
+			var numOfVariables = 6
+			var numOfEquations = 0
+			for i, hailstone := range hailRecords {
+				for j := 0; j < 3; j++ {
+					//  0      =                 x_a_0          + t_h_a  *          x_a_v                 - x_h_0 -  t_h_a * x_h_v
+					out[3*i+j] = float64(hailstone.Position[j]) + x[6+i] * float64(hailstone.Velocity[j]) - x[j] - x[6+i] * x[3+j]
+				}
+				numOfVariables++
+				numOfEquations++
+				if numOfEquations == numOfVariables {
+					break
+				}
+			}
+		},
+	}
+
+	solver := nonlin.NewtonKrylov{
+		Maxiter: 100000000,
+		StepSize: 0.1,
+		Tol: 0.0001,
+	}
+
+	var x0 = []float64{0.0,0.0,0.0,0.0,0.0,0.0,}
+	var numOfVariables = 6
+	var numOfEquations = 0
+	for i := 0; i < len(hailRecords); i++ {
+		x0 = append(x0, 0.0)
+		numOfVariables++
+		numOfEquations++
+		if numOfEquations == numOfVariables {
+			break
+		}
+	}
+	
+	// using nonlin results in:
+	// 2023/12/30 08:08:30 NewtonKrylov: linsolve: iteration limit reached
+	res := solver.Solve(problem, x0)
+	
+	fmt.Println("initial x, y ,z", res.X[0], res.X[1], res.X[2])
+	fmt.Println("velocity x, y ,z", res.X[3], res.X[4], res.X[5])
+
+	return res.X[0] + res.X[1] + res.X[2]
 }
 
 func Day24() {
