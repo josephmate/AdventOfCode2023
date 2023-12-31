@@ -434,6 +434,78 @@ func printObj(hailRecords []HailRecord) {
 
 
 /*
+This experiment failed for two reasons:
+
+1) keep getting 2023/12/30 08:08:30 NewtonKrylov: linsolve: iteration limit reached
+
+2) number of equations has to equal number of variables for some reason. if i don't
+   I get index out of bounds. hopefully octave fsolve doesn't have that issue
+*/
+func hitAllHailstonesUsingGolangNonLinLibrary(hailRecords []HailRecord) float64 {
+	
+	// intial positions of start throw will be x[0], x[1], x[2]
+	// velocity of throw will be x[3], x[4], x[5]
+	// the time of collision with hailstone i will be x[6+i]
+	// the 3 equation per hailstone will be out[i*3 + 0],out[i*3 + 1],out[i*3 + 2]
+
+	problem := nonlin.Problem{
+		F: func(out, x []float64) {
+			var numOfVariables = 6
+			var numOfEquations = 0
+			for i, hailstone := range hailRecords {
+				for j := 0; j < 3; j++ {
+					//  0      =                 x_a_0          + t_h_a  *          x_a_v                 - x_h_0 -  t_h_a * x_h_v
+					out[3*i+j] = float64(hailstone.Position[j]) + x[6+i] * float64(hailstone.Velocity[j]) - x[j] - x[6+i] * x[3+j]
+					numOfEquations++
+				}
+				numOfVariables++
+				if numOfEquations >= numOfVariables {
+					break
+				}
+			}
+		},
+	}
+
+	solver := nonlin.NewtonKrylov{
+		Maxiter: 100000000,
+		StepSize: 0.1,
+		Tol: 0.0001,
+	}
+
+	var x0 = []float64{0.0,0.0,0.0,0.0,0.0,0.0,}
+	var numOfVariables = 6
+	var numOfEquations = 0
+	for i := 0; i < len(hailRecords); i++ {
+		x0 = append(x0, 0.0)
+		numOfVariables++
+		numOfEquations+=3
+		if numOfEquations >= numOfVariables {
+			break
+		}
+	}
+	fmt.Println("numOfVariables", numOfVariables)
+	fmt.Println("numOfEquations", numOfEquations)
+	
+	// using nonlin results in:
+	// 2023/12/30 08:08:30 NewtonKrylov: linsolve: iteration limit reached
+	res := solver.Solve(problem, x0)
+	
+	fmt.Println("initial x, y ,z", res.X[0], res.X[1], res.X[2])
+	fmt.Println("velocity x, y ,z", res.X[3], res.X[4], res.X[5])
+
+	return res.X[0] + res.X[1] + res.X[2]
+}
+
+
+func hailPosnAvg(hailRecords []HailRecord, dim int) float64 {
+	var sum int64 = 0
+	for _, hailstone :=range hailRecords {
+		sum += hailstone.Position[dim-1]
+	}
+	return float64(sum) / float64(len(hailRecords))
+}
+
+/*
     x(t) = x_0 + t * x_v
     y(t) = y_0 + t * y_v
     z(t) = z_0 + t * z_v
@@ -499,60 +571,98 @@ First lets re-arrange our questions to be 0= :
 	  0 = x_c_0 + t_h_c * x_c_v - x_h_0 - t_h_c * x_h_v
 	  0 = y_c_0 + t_h_c * y_c_v - y_h_0 - t_h_c * y_h_v
 	  0 = z_c_0 + t_h_c * z_c_v - z_h_0 - t_h_c * z_h_v
+
+I gave up trying to use the nonlin golang library because
+
+1) keep getting 2023/12/30 08:08:30 NewtonKrylov: linsolve: iteration limit reached
+
+
+2) number of equations has to equal number of variables for some reason. if i don't
+   I get index out of bounds. hopefully octave fsolve doesn't have that issue
+
+I saw a similar library https://github.com/epit3d/gofsolve but it has the same
+limitation N variables, N equations.
+
+Next I found fsolve in matlab/octave which doesn't seem to have this N equations, N equations limitation.
+So I'm going to try to generate the matlab code here and paste it.
+
+I was able to get the expected solution for the sample.
+however, fsolve isn't giving me a solution for the real. 
+I tried adjust the intial x with values closer to expected initial position by taking the average but still
+no solution.
+
+matlab/octave has a symbolic computation library that i'm considering trying.
+
 */
 func hitAllHailstones(hailRecords []HailRecord) float64 {
 	
-	// intial positions of start throw will be x[0], x[1], x[2]
-	// velocity of throw will be x[3], x[4], x[5]
-	// the time of collision with hailstone i will be x[6+i]
-	// the 3 equation per hailstone will be out[i*3 + 0],out[i*3 + 1],out[i*3 + 2]
-
-	problem := nonlin.Problem{
-		F: func(out, x []float64) {
-			var numOfVariables = 6
-			var numOfEquations = 0
-			for i, hailstone := range hailRecords {
-				for j := 0; j < 3; j++ {
-					//  0      =                 x_a_0          + t_h_a  *          x_a_v                 - x_h_0 -  t_h_a * x_h_v
-					out[3*i+j] = float64(hailstone.Position[j]) + x[6+i] * float64(hailstone.Velocity[j]) - x[j] - x[6+i] * x[3+j]
-					numOfEquations++
-				}
-				numOfVariables++
-				if numOfEquations >= numOfVariables {
-					break
-				}
-			}
-		},
+	file, err := os.Create("hitAllHailstones.m")
+	if err != nil {
+		fmt.Println("Could not open hitAllHailstones.m")
+		return 0
 	}
+	defer file.Close()
 
-	solver := nonlin.NewtonKrylov{
-		Maxiter: 100000000,
-		StepSize: 0.1,
-		Tol: 0.0001,
-	}
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
 
-	var x0 = []float64{0.0,0.0,0.0,0.0,0.0,0.0,}
-	var numOfVariables = 6
-	var numOfEquations = 0
-	for i := 0; i < len(hailRecords); i++ {
-		x0 = append(x0, 0.0)
-		numOfVariables++
-		numOfEquations+=3
-		if numOfEquations >= numOfVariables {
-			break
+	/*
+	function F = equations_to_solve(x)
+		F(1) = x(1) + 2*x(2) - x(3) - 5;
+		F(2) = 2*x(1) - x(2) + 3*x(3) - 10;
+		% Define equations 3 through 10 similarly
+		...
+		% eq10: F(10) = ...
+	end
+
+	% Initial guess for the variables
+	x0 = zeros(8, 1); % You may provide your own initial guess
+
+	% Solve the equations using fsolve
+	x_solution = fsolve(@equations_to_solve, x0);
+	x_solution % Displays the solution
+	fprintf('Initial position x,y,z = %.2f,%.2f,%.2f,\n', x_solution(1:3));
+  fprintf('Velocity x,y,z = %.2f,%.2f,%.2f,\n', x_solution(4:6));
+	*/
+	fmt.Fprintln(writer, "function F = equations_to_solve(x)")
+	var currentEquation = 1
+	var currentVariable = 7 // 1 to 6 are used for intial position and velocity of our hailstone
+	for _, hailstone := range hailRecords {
+		for dim := 1; dim <= 3; dim++ {
+			fmt.Fprintln(writer, "  F(", currentEquation, ") = ",         // equation re-arrange to O = blah
+				hailstone.Position[dim-1],                                    // hailstone intial posn
+				" + x(", currentVariable, ") * ", hailstone.Velocity[dim-1],  // hailstone velocity * collision time
+				 " - x(", dim, ")",                                         // thrown hailstone initial pson
+				" - x(", currentVariable, ") * x(", dim + 3, ") ;")           // thrown hailstone velocity
+			currentEquation++
 		}
+		currentVariable++
 	}
-	fmt.Println("numOfVariables", numOfVariables)
-	fmt.Println("numOfEquations", numOfEquations)
-	
-	// using nonlin results in:
-	// 2023/12/30 08:08:30 NewtonKrylov: linsolve: iteration limit reached
-	res := solver.Solve(problem, x0)
-	
-	fmt.Println("initial x, y ,z", res.X[0], res.X[1], res.X[2])
-	fmt.Println("velocity x, y ,z", res.X[3], res.X[4], res.X[5])
+	fmt.Fprintln(writer, "end")
+	fmt.Fprintln(writer, "x0 = zeros(", 6 + len(hailRecords), ", 1); % You may provide your own initial guess")
+	fmt.Fprintln(writer, "x0(", 1, ") = ", hailPosnAvg(hailRecords, 1), ";")
+	fmt.Fprintln(writer, "x0(", 2, ") = ", hailPosnAvg(hailRecords, 2), ";")
+	fmt.Fprintln(writer, "x0(", 3, ") = ", hailPosnAvg(hailRecords, 3), ";")
+	// fmt.Fprintln(writer, "x0(", 4, ") = 1;")
+	// fmt.Fprintln(writer, "x0(", 5, ") = 1;")
+	// fmt.Fprintln(writer, "x0(", 6, ") = 1;")
+	// fmt.Fprintln(writer, "x0(end-", len(hailRecords)-1, ":end) = (1:300);")
+	// fmt.Fprintln(writer, "options = optimoptions('fsolve', 'Display', 'off');")
+	// fmt.Fprintln(writer, "x_solution = fsolve(@equations_to_solve, x0, options);")
+	fmt.Fprintln(writer, "x_solution = fsolve(@equations_to_solve, x0);")
+	fmt.Fprintln(writer, "x_solution % Displays the solution")
+	fmt.Fprintln(writer, "fprintf('Initial position x,y,z = %.2f,%.2f,%.2f,\\n', x_solution(1:3));")
+	fmt.Fprintln(writer, "fprintf('Velocity x,y,z = %.2f,%.2f,%.2f,\\n', x_solution(4:6));")
+	fmt.Fprintln(writer, "fprintf('Answer for part 2 = %.2f\\n', (x_solution(1)+x_solution(2)+x_solution(3)));")
 
-	return res.X[0] + res.X[1] + res.X[2]
+	/*
+	For the sample I get as expected:
+	Initial position x,y,z = 24.00,13.00,10.00,
+	Velocity x,y,z = -3.00,1.00,2.00,
+	Answer for part 2 = 47.00
+	*/
+
+	return 0
 }
 
 func Day24() {
