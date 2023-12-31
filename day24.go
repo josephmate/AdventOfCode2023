@@ -515,10 +515,10 @@ func hitAllHailstones(hailRecords []HailRecord) float64 {
 				for j := 0; j < 3; j++ {
 					//  0      =                 x_a_0          + t_h_a  *          x_a_v                 - x_h_0 -  t_h_a * x_h_v
 					out[3*i+j] = float64(hailstone.Position[j]) + x[6+i] * float64(hailstone.Velocity[j]) - x[j] - x[6+i] * x[3+j]
+					numOfEquations++
 				}
 				numOfVariables++
-				numOfEquations++
-				if numOfEquations == numOfVariables {
+				if numOfEquations >= numOfVariables {
 					break
 				}
 			}
@@ -537,11 +537,13 @@ func hitAllHailstones(hailRecords []HailRecord) float64 {
 	for i := 0; i < len(hailRecords); i++ {
 		x0 = append(x0, 0.0)
 		numOfVariables++
-		numOfEquations++
-		if numOfEquations == numOfVariables {
+		numOfEquations+=3
+		if numOfEquations >= numOfVariables {
 			break
 		}
 	}
+	fmt.Println("numOfVariables", numOfVariables)
+	fmt.Println("numOfEquations", numOfEquations)
 	
 	// using nonlin results in:
 	// 2023/12/30 08:08:30 NewtonKrylov: linsolve: iteration limit reached
