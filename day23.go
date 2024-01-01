@@ -1,64 +1,50 @@
 package main
 
 import (
-	"encoding/binary"
 	"fmt"
+	"hash/fnv"
 	"os"
 
-	"github.com/bits-and-blooms/bloom/v3"
+	"github.com/bits-and-blooms/bitset"
 )
 
 type HikingPath struct {
 	CurrentPosition [2]int
-	Visited         map[[2]int]bool
 	HashOfPath      uint
-	VisitedBloom    *bloom.BloomFilter
+	Visited    *bitset.BitSet
 }
 
-func cloneHikingPath(hikingPath HikingPath) HikingPath {
-	cloned := HikingPath{}
-
-	cloned.Visited = make(map[[2]int]bool)
-	for key, value := range hikingPath.Visited {
-		cloned.Visited[key] = value
-	}
-
-	return cloned
-}
-
-func printHikingPath(hikingMap [][]byte, longestSoFarPath HikingPath) {
-	if !DEBUG {
-		return
-	}
-
+func mapPosnToId(hikingMap [][]byte) map[[2]int]uint {
+	var id = uint(0)
+	posnToId := map[[2]int]uint{}
 	for r, row := range hikingMap {
 		for c, col := range row {
-			if longestSoFarPath.Visited[[2]int{r, c}] {
-				fmt.Print("O")
-			} else {
-				fmt.Print(string(col))
+			if col != '#' {
+				posnToId[[2]int{r,c}] = id
+				id++
 			}
 		}
-		fmt.Println()
 	}
+	return posnToId
 }
 
+func getId()
 
-func findLongestPath(hikingMap [][]byte) int {
+func findLongestPath(hikingMap [][]byte) uint {
 	startPosn := [2]int{0, 1}
 	numRows := len(hikingMap)
 	numCols := len(hikingMap[0])
 	endPosn := [2]int{numRows - 1, numCols - 2}
 
+	posnToId := mapPosnToId(hikingMap)
 	var queue []HikingPath
 	startPath := HikingPath{}
 	startPath.CurrentPosition = startPosn
-	startPath.Visited = map[[2]int]bool{}
-	startPath.Visited[startPosn] = true
+	startPath.Visited = bitset.New(64)
+	startPath.Visited.Set(posnToId[startPosn])
 	queue = append(queue, startPath)
 
-	longestSoFar := map[[2]int]int{}
-	longestSoFarPath := map[[2]int]HikingPath{}
+	longestSoFar := map[[2]int]uint{}
 
 	for len(queue) > 0 {
 		currentPath := queue[0]
@@ -69,11 +55,10 @@ func findLongestPath(hikingMap [][]byte) int {
 		}
 
 		// we already have a longer path thru this point
-		if longestSoFar[currentPath.CurrentPosition] >= len(currentPath.Visited) {
+		if longestSoFar[currentPath.CurrentPosition] >= currentPath.Visited.Count() {
 			continue
 		}
-		longestSoFar[currentPath.CurrentPosition] = len(currentPath.Visited)
-		longestSoFarPath[currentPath.CurrentPosition] = currentPath
+		longestSoFar[currentPath.CurrentPosition] = currentPath.Visited.Count()
 
 		// out of bounds
 		if currentPath.CurrentPosition[0] < 0 ||
@@ -90,63 +75,81 @@ func findLongestPath(hikingMap [][]byte) int {
 
 		if currentTerrain == '>' || currentTerrain == '.' {
 			nextPosn := [2]int{currentPath.CurrentPosition[0], currentPath.CurrentPosition[1] + 1}
-			if !currentPath.Visited[nextPosn] &&
-				nextPosn[0] >= 0 &&
+			nextHash := currentPath.HashOfPath + hash(hikingMap, nextPosn)
+			if nextPosn[0] >= 0 &&
 				nextPosn[0] < len(hikingMap) &&
 				nextPosn[1] >= 0 &&
 				nextPosn[1] < len(hikingMap[0]) &&
-				hikingMap[nextPosn[0]][nextPosn[1]] != '#' {
-				nextPath := cloneHikingPath(currentPath)
-				nextPath.CurrentPosition = nextPosn
-				nextPath.Visited[nextPosn] = true
+				hikingMap[nextPosn[0]][nextPosn[1]] != '#' &&
+				!currentPath.Visited.Test(posnToId[nextPosn]) {
+				newBitSet := currentPath.Visited.Clone()
+				newBitSet.Set(posnToId[nextPosn])
+				nextPath := HikingPath{
+					CurrentPosition: nextPosn,
+					HashOfPath: currentPath.HashOfPath + nextHash,
+					Visited: newBitSet,
+				}
 				queue = append(queue, nextPath)
 			}
 		}
 		if currentTerrain == 'v' || currentTerrain == '.' {
 			nextPosn := [2]int{currentPath.CurrentPosition[0] + 1, currentPath.CurrentPosition[1]}
-			if !currentPath.Visited[nextPosn] &&
-				nextPosn[0] >= 0 &&
+			nextHash := currentPath.HashOfPath + hash(hikingMap, nextPosn)
+			if nextPosn[0] >= 0 &&
 				nextPosn[0] < len(hikingMap) &&
 				nextPosn[1] >= 0 &&
 				nextPosn[1] < len(hikingMap[0]) &&
-				hikingMap[nextPosn[0]][nextPosn[1]] != '#' {
-				nextPath := cloneHikingPath(currentPath)
-				nextPath.CurrentPosition = nextPosn
-				nextPath.Visited[nextPosn] = true
+				hikingMap[nextPosn[0]][nextPosn[1]] != '#' &&
+				!currentPath.Visited.Test(posnToId[nextPosn]) {
+				newBitSet := currentPath.Visited.Clone()
+				newBitSet.Set(posnToId[nextPosn])
+				nextPath := HikingPath{
+					CurrentPosition: nextPosn,
+					HashOfPath: currentPath.HashOfPath + nextHash,
+					Visited: newBitSet,
+				}
 				queue = append(queue, nextPath)
 			}
 		}
 		if currentTerrain == '<' || currentTerrain == '.' {
 			nextPosn := [2]int{currentPath.CurrentPosition[0], currentPath.CurrentPosition[1] - 1}
-			if !currentPath.Visited[nextPosn] &&
-				nextPosn[0] >= 0 &&
+			nextHash := currentPath.HashOfPath + hash(hikingMap, nextPosn)
+			if nextPosn[0] >= 0 &&
 				nextPosn[0] < len(hikingMap) &&
 				nextPosn[1] >= 0 &&
 				nextPosn[1] < len(hikingMap[0]) &&
-				hikingMap[nextPosn[0]][nextPosn[1]] != '#' {
-				nextPath := cloneHikingPath(currentPath)
-				nextPath.CurrentPosition = nextPosn
-				nextPath.Visited[nextPosn] = true
+				hikingMap[nextPosn[0]][nextPosn[1]] != '#' &&
+				!currentPath.Visited.Test(posnToId[nextPosn]){
+				newBitSet := currentPath.Visited.Clone()
+				newBitSet.Set(posnToId[nextPosn])
+				nextPath := HikingPath{
+					CurrentPosition: nextPosn,
+					HashOfPath: currentPath.HashOfPath + nextHash,
+					Visited: newBitSet,
+				}
 				queue = append(queue, nextPath)
 			}
 		}
 		if currentTerrain == '^' || currentTerrain == '.' {
 			nextPosn := [2]int{currentPath.CurrentPosition[0] - 1, currentPath.CurrentPosition[1]}
-			if !currentPath.Visited[nextPosn] &&
-				nextPosn[0] >= 0 &&
+			nextHash := currentPath.HashOfPath + hash(hikingMap, nextPosn)
+			if nextPosn[0] >= 0 &&
 				nextPosn[0] < len(hikingMap) &&
 				nextPosn[1] >= 0 &&
 				nextPosn[1] < len(hikingMap[0]) &&
-				hikingMap[nextPosn[0]][nextPosn[1]] != '#' {
-				nextPath := cloneHikingPath(currentPath)
-				nextPath.CurrentPosition = nextPosn
-				nextPath.Visited[nextPosn] = true
+				hikingMap[nextPosn[0]][nextPosn[1]] != '#' &&
+				!currentPath.Visited.Test(posnToId[nextPosn]){
+				newBitSet := currentPath.Visited.Clone()
+				newBitSet.Set(posnToId[nextPosn])
+				nextPath := HikingPath{
+					CurrentPosition: nextPosn,
+					HashOfPath: currentPath.HashOfPath + nextHash,
+					Visited: newBitSet,
+				}
 				queue = append(queue, nextPath)
 			}
 		}
 	}
-
-	printHikingPath(hikingMap, longestSoFarPath[endPosn])
 
 	return longestSoFar[endPosn] - 1
 }
@@ -166,37 +169,53 @@ func hash(hikingMap [][]byte, posn [2]int) uint {
 	return x
 }
 
-func addToBloom(hikingMap [][]byte, hikingPath HikingPath, posn [2]int) {
-	i := uint32(posn[0] * len(hikingMap[0]) + posn[1])
-	n1 := make([]byte, 4)
-	binary.BigEndian.PutUint32(n1, i)
-	hikingPath.VisitedBloom.Add(n1)
+func countMovableSpaces(hikingMap [][]byte) int {
+	var count = 0
+	for _, row := range hikingMap {
+		for _, col := range row {
+			if col != '#' {
+				count++
+			}
+		}
+	}
+	return count
 }
 
-func containsBloom(hikingMap [][]byte, hikingPath HikingPath, posn [2]int) bool {
-	i := uint32(posn[0] * len(hikingMap[0]) + posn[1])
-	n1 := make([]byte, 4)
-	binary.BigEndian.PutUint32(n1, i)
-	return hikingPath.VisitedBloom.Test(n1)
+type BitsetKey struct {
+	BitSet *bitset.BitSet
 }
 
-func findLongestPathIgnoreSlopes(hikingMap [][]byte) int {
+func (bk BitsetKey) Equals(other BitsetKey) bool {
+	return bk.BitSet.Equal(other.BitSet)
+}
+
+func (bk BitsetKey) Hash() int {
+	h := fnv.New32a()
+	bytes, _ := bk.BitSet.MarshalBinary()
+	h.Write(bytes)
+	return int(h.Sum32())
+}
+
+/*
+at this point I realized that bloom doesn't make sense at because i can uniquely identify each position.
+which means I could create a bitset which takes up less space.
+*/
+func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
 	startPosn := [2]int{0, 1}
 	numRows := len(hikingMap)
 	numCols := len(hikingMap[0])
 	endPosn := [2]int{numRows - 1, numCols - 2}
+	
 	var queue []HikingPath
 	startPath := HikingPath{}
 	startPath.CurrentPosition = startPosn
-	startPath.VisitedBloom = bloom.NewWithEstimates(uint(len(hikingMap))*uint(len(hikingMap[0])), 0.0001)
-	m, k := bloom.EstimateParameters(uint(len(hikingMap))*uint(len(hikingMap[0])), 0.0001)
-	addToBloom(hikingMap, startPath, startPosn)
-	fmt.Println("estimate params m=", m, "k=", k)
+	startPath.Visited = bitset.New(64)
+	posnToId := mapPosnToId(hikingMap)
+	startPath.Visited.Set(posnToId[startPosn])
 	startPath.HashOfPath = hash(hikingMap, startPosn)
 	queue = append(queue, startPath)
 
-	longestSoFar := map[[2]int]int{}
-	longestSoFarPath := map[[2]int]HikingPath{}
+	longestSoFar := map[[2]int]uint{}
 	// try to deduplicate paths using the hash of the path so far
 	dedupePaths := map[uint]bool{}
 
@@ -208,17 +227,9 @@ func findLongestPathIgnoreSlopes(hikingMap [][]byte) int {
 			fmt.Println(currentPath)
 		}
 
-		// we already have a longer path thru this point
-		// if longestSoFar[currentPath.CurrentPosition] >= len(currentPath.Visited) {
-		// 	continue
-		// }
-		// longestSoFar[currentPath.CurrentPosition] = len(currentPath.Visited)
-		// longestSoFarPath[currentPath.CurrentPosition] = currentPath
-		if len(currentPath.Visited) > longestSoFar[currentPath.CurrentPosition] {
-			longestSoFar[currentPath.CurrentPosition] = len(currentPath.Visited)
-			longestSoFarPath[currentPath.CurrentPosition] = currentPath
+		if longestSoFar[currentPath.CurrentPosition] > currentPath.Visited.Count() {
+			longestSoFar[currentPath.CurrentPosition] = currentPath.Visited.Count()
 		}
-
 		dedupePaths[currentPath.HashOfPath] = true
 
 		// out of bounds
@@ -236,74 +247,80 @@ func findLongestPathIgnoreSlopes(hikingMap [][]byte) int {
 
 		var nextPosn = [2]int{currentPath.CurrentPosition[0], currentPath.CurrentPosition[1] + 1}
 		var nextHash = currentPath.HashOfPath + hash(hikingMap, nextPosn)
-		if !containsBloom(hikingMap, currentPath, nextPosn) &&
-			!dedupePaths[nextHash] &&
+		if !dedupePaths[nextHash] &&
 			nextPosn[0] >= 0 &&
 			nextPosn[0] < len(hikingMap) &&
 			nextPosn[1] >= 0 &&
 			nextPosn[1] < len(hikingMap[0]) &&
-			hikingMap[nextPosn[0]][nextPosn[1]] != '#' {
-			nextPath := HikingPath{}
-			nextPath.VisitedBloom = currentPath.VisitedBloom.Copy()
-			addToBloom(hikingMap, nextPath, nextPosn)
-			nextPath.CurrentPosition = nextPosn
-			nextPath.HashOfPath = nextHash
-			queue = append(queue, nextPath)
+			hikingMap[nextPosn[0]][nextPosn[1]] != '#' &&
+			!currentPath.Visited.Test(posnToId[nextPosn]) {
+				newBitSet := currentPath.Visited.Clone()
+				newBitSet.Set(posnToId[nextPosn])
+				nextPath := HikingPath{
+					CurrentPosition: nextPosn,
+					HashOfPath: currentPath.HashOfPath + nextHash,
+					Visited: newBitSet,
+				}
+				queue = append(queue, nextPath)
 		}
 
 		nextPosn = [2]int{currentPath.CurrentPosition[0] + 1, currentPath.CurrentPosition[1]}
 		nextHash = currentPath.HashOfPath + hash(hikingMap, nextPosn)
-		if !containsBloom(hikingMap, currentPath, nextPosn) &&
-			!dedupePaths[nextHash] &&
+		if !dedupePaths[nextHash] &&
 			nextPosn[0] >= 0 &&
 			nextPosn[0] < len(hikingMap) &&
 			nextPosn[1] >= 0 &&
 			nextPosn[1] < len(hikingMap[0]) &&
-			hikingMap[nextPosn[0]][nextPosn[1]] != '#' {
-			nextPath := HikingPath{}
-			nextPath.VisitedBloom = currentPath.VisitedBloom.Copy()
-			addToBloom(hikingMap, nextPath, nextPosn)
-			nextPath.CurrentPosition = nextPosn
-			nextPath.HashOfPath = nextHash
-			queue = append(queue, nextPath)
+			hikingMap[nextPosn[0]][nextPosn[1]] != '#' &&
+			!currentPath.Visited.Test(posnToId[nextPosn]) {
+				newBitSet := currentPath.Visited.Clone()
+				newBitSet.Set(posnToId[nextPosn])
+				nextPath := HikingPath{
+					CurrentPosition: nextPosn,
+					HashOfPath: currentPath.HashOfPath + nextHash,
+					Visited: newBitSet,
+				}
+				queue = append(queue, nextPath)
 		}
 
 		nextPosn = [2]int{currentPath.CurrentPosition[0], currentPath.CurrentPosition[1] - 1}
 		nextHash = currentPath.HashOfPath + hash(hikingMap, nextPosn)
-		if !containsBloom(hikingMap, currentPath, nextPosn) &&
-			!dedupePaths[nextHash] &&
+		if !dedupePaths[nextHash] &&
 			nextPosn[0] >= 0 &&
 			nextPosn[0] < len(hikingMap) &&
 			nextPosn[1] >= 0 &&
 			nextPosn[1] < len(hikingMap[0]) &&
-			hikingMap[nextPosn[0]][nextPosn[1]] != '#' {
-			nextPath := HikingPath{}
-			nextPath.VisitedBloom = currentPath.VisitedBloom.Copy()
-			addToBloom(hikingMap, nextPath, nextPosn)
-			nextPath.CurrentPosition = nextPosn
-			nextPath.HashOfPath = nextHash
-			queue = append(queue, nextPath)
+			hikingMap[nextPosn[0]][nextPosn[1]] != '#'  &&
+			!currentPath.Visited.Test(posnToId[nextPosn]){
+				newBitSet := currentPath.Visited.Clone()
+				newBitSet.Set(posnToId[nextPosn])
+				nextPath := HikingPath{
+					CurrentPosition: nextPosn,
+					HashOfPath: currentPath.HashOfPath + nextHash,
+					Visited: newBitSet,
+				}
+				queue = append(queue, nextPath)
 		}
 
 		nextPosn = [2]int{currentPath.CurrentPosition[0] - 1, currentPath.CurrentPosition[1]}
 		nextHash = currentPath.HashOfPath + hash(hikingMap, nextPosn)
-		if !containsBloom(hikingMap, currentPath, nextPosn) &&
-			!dedupePaths[nextHash] &&
+		if !dedupePaths[nextHash] &&
 			nextPosn[0] >= 0 &&
 			nextPosn[0] < len(hikingMap) &&
 			nextPosn[1] >= 0 &&
 			nextPosn[1] < len(hikingMap[0]) &&
-			hikingMap[nextPosn[0]][nextPosn[1]] != '#' {
-			nextPath := HikingPath{}
-			nextPath.VisitedBloom = currentPath.VisitedBloom.Copy()
-			addToBloom(hikingMap, nextPath, nextPosn)
-			nextPath.CurrentPosition = nextPosn
-			nextPath.HashOfPath = nextHash
-			queue = append(queue, nextPath)
+			hikingMap[nextPosn[0]][nextPosn[1]] != '#' &&
+			!currentPath.Visited.Test(posnToId[nextPosn]) {
+				newBitSet := currentPath.Visited.Clone()
+				newBitSet.Set(posnToId[nextPosn])
+				nextPath := HikingPath{
+					CurrentPosition: nextPosn,
+					HashOfPath: currentPath.HashOfPath + nextHash,
+					Visited: newBitSet,
+				}
+				queue = append(queue, nextPath)
 		}
 	}
-
-	printHikingPath(hikingMap, longestSoFarPath[endPosn])
 
 	return longestSoFar[endPosn] - 1
 }
