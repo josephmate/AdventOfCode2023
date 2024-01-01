@@ -505,6 +505,81 @@ func hailPosnAvg(hailRecords []HailRecord, dim int) float64 {
 	return float64(sum) / float64(len(hailRecords))
 }
 
+func hitAllHailstonesMatlabOctaveFsolve(hailRecords []HailRecord) float64 {
+	
+	file, err := os.Create("hitAllHailstones.m")
+	if err != nil {
+		fmt.Println("Could not open hitAllHailstones.m")
+		return 0
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+
+	/*
+	function F = equations_to_solve(x)
+		F(1) = x(1) + 2*x(2) - x(3) - 5;
+		F(2) = 2*x(1) - x(2) + 3*x(3) - 10;
+		% Define equations 3 through 10 similarly
+		...
+		% eq10: F(10) = ...
+	end
+
+	% Initial guess for the variables
+	x0 = zeros(8, 1); % You may provide your own initial guess
+
+	% Solve the equations using fsolve
+	x_solution = fsolve(@equations_to_solve, x0);
+	x_solution % Displays the solution
+	fprintf('Initial position x,y,z = %.2f,%.2f,%.2f,\n', x_solution(1:3));
+  fprintf('Velocity x,y,z = %.2f,%.2f,%.2f,\n', x_solution(4:6));
+	*/
+	fmt.Fprintln(writer, "function F = equations_to_solve(x)")
+	var numEq = 0
+	var numVars = 6 // 1 to 6 are used for intial position and velocity of our hailstone
+	for _, hailstone := range hailRecords {
+		for dim := 1; dim <= 3; dim++ {
+			fmt.Fprintln(writer, "  F(", numEq+1, ") = ",         // equation re-arrange to O = blah
+				hailstone.Position[dim-1],                                    // hailstone intial posn
+				" + x(", numVars+1, ") * ", hailstone.Velocity[dim-1],  // hailstone velocity * collision time
+				 " - x(", dim, ")",                                         // thrown hailstone initial pson
+				" - x(", numVars+1, ") * x(", dim + 3, ") ;")           // thrown hailstone velocity
+				numEq++
+		}
+		numVars++
+
+		if numEq >= numVars {
+			break
+		}
+	}
+	fmt.Fprintln(writer, "end")
+	fmt.Fprintln(writer, "x0 = zeros(", numVars, ", 1); % You may provide your own initial guess")
+	fmt.Fprintln(writer, "x0(", 1, ") = ", hailPosnAvg(hailRecords, 1), ";")
+	fmt.Fprintln(writer, "x0(", 2, ") = ", hailPosnAvg(hailRecords, 2), ";")
+	fmt.Fprintln(writer, "x0(", 3, ") = ", hailPosnAvg(hailRecords, 3), ";")
+	// fmt.Fprintln(writer, "x0(", 4, ") = 1;")
+	// fmt.Fprintln(writer, "x0(", 5, ") = 1;")
+	// fmt.Fprintln(writer, "x0(", 6, ") = 1;")
+	// fmt.Fprintln(writer, "x0(end-", len(hailRecords)-1, ":end) = (1:300);")
+	// fmt.Fprintln(writer, "options = optimoptions('fsolve', 'Display', 'off');")
+	// fmt.Fprintln(writer, "x_solution = fsolve(@equations_to_solve, x0, options);")
+	fmt.Fprintln(writer, "x_solution = fsolve(@equations_to_solve, x0);")
+	fmt.Fprintln(writer, "x_solution % Displays the solution")
+	fmt.Fprintln(writer, "fprintf('Initial position x,y,z = %.2f,%.2f,%.2f,\\n', x_solution(1:3));")
+	fmt.Fprintln(writer, "fprintf('Velocity x,y,z = %.2f,%.2f,%.2f,\\n', x_solution(4:6));")
+	fmt.Fprintln(writer, "fprintf('Answer for part 2 = %.2f\\n', (x_solution(1)+x_solution(2)+x_solution(3)));")
+
+	/*
+	For the sample I get as expected:
+	Initial position x,y,z = 24.00,13.00,10.00,
+	Velocity x,y,z = -3.00,1.00,2.00,
+	Answer for part 2 = 47.00
+	*/
+
+	return 0
+}
+
 /*
     x(t) = x_0 + t * x_v
     y(t) = y_0 + t * y_v
@@ -591,7 +666,15 @@ however, fsolve isn't giving me a solution for the real.
 I tried adjust the intial x with values closer to expected initial position by taking the average but still
 no solution.
 
-matlab/octave has a symbolic computation library that i'm considering trying.
+I even tried reducing the number of equations and got:
+```
+warning: matrix singular to machine precision
+warning: called from
+    fsolve>__dogleg__ at line 552 column 5
+    fsolve at line 368 column 11
+```
+
+matlab/octave has a symbolic computation library that i'm gonna try.
 
 */
 func hitAllHailstones(hailRecords []HailRecord) float64 {
@@ -607,59 +690,100 @@ func hitAllHailstones(hailRecords []HailRecord) float64 {
 	defer writer.Flush()
 
 	/*
-	function F = equations_to_solve(x)
-		F(1) = x(1) + 2*x(2) - x(3) - 5;
-		F(2) = 2*x(1) - x(2) + 3*x(3) - 10;
-		% Define equations 3 through 10 similarly
-		...
-		% eq10: F(10) = ...
-	end
+	pkg load symbolic
 
-	% Initial guess for the variables
-	x0 = zeros(8, 1); % You may provide your own initial guess
+	syms x1 x2 x3 x4 x5 % Define the symbolic variables
 
-	% Solve the equations using fsolve
-	x_solution = fsolve(@equations_to_solve, x0);
-	x_solution % Displays the solution
-	fprintf('Initial position x,y,z = %.2f,%.2f,%.2f,\n', x_solution(1:3));
-  fprintf('Velocity x,y,z = %.2f,%.2f,%.2f,\n', x_solution(4:6));
+	% Define the equations
+	eq1 = 2*x1 + 3*x2 - x3 + 4*x4 - 5*x5 == 10;
+	eq2 = x1 - 2*x2 + x3 - x4 + 3*x5 == 5;
+	eq3 = 3*x1 + x2 + 2*x3 - 4*x4 + x5 == 8;
+	eq4 = -x1 + 4*x2 + 5*x3 + x4 - 2*x5 == 3;
+	eq5 = x1 + x2 - 3*x3 + 2*x4 + x5 == 6;
+	eq6 = x1 + 2*x2 - x3 - x4 + 3*x5 == 7;
+	eq7 = 4*x1 - x2 + 3*x3 + x4 + 2*x5 == 9;
+	eq8 = -2*x1 + 3*x2 + x3 + 4*x4 - x5 == 4;
+	eq9 = x1 - 3*x2 + 2*x3 + x4 + x5 == 2;
+	eq10 = 2*x1 + x2 - x3 + 3*x4 - x5 == 1;
+
+	eqns = [eq1, eq2, eq3, eq4, eq5, eq6, eq7, eq8, eq9, eq10]; % Combine equations
+
+	% Solve the system of equations
+	[sol_x1, sol_x2, sol_x3, sol_x4, sol_x5] = solve(eqns, [x1, x2, x3, x4, x5]);
+
+	% Display solutions
+	sol_x1
+	sol_x2
+	sol_x3
+	sol_x4
+	sol_x5
 	*/
-	fmt.Fprintln(writer, "function F = equations_to_solve(x)")
-	var currentEquation = 1
-	var currentVariable = 7 // 1 to 6 are used for intial position and velocity of our hailstone
+	fmt.Fprintln(writer, "pkg load symbolic")
+	fmt.Fprintln(writer, "syms x1 x2 x3 x4 x5 x6")
+	
+	var numEq = 0
+	var numVars = 6 // 1 to 6 are used for intial position and velocity of our hailstone
+	for range hailRecords {
+		for dim := 1; dim <= 3; dim++ {
+			numEq++
+		}
+		numVars++
+		fmt.Fprintf(writer, "syms x%d;\n", numVars)
+		if numEq >= numVars {
+			break
+		}
+	}
+
+	numEq = 0
+	numVars = 6 // 1 to 6 are used for intial position and velocity of our hailstone
+	fmt.Fprintf(writer, "vars = [x1, x2, x3, x4, x5, x6")
+	for range hailRecords {
+		for dim := 1; dim <= 3; dim++ {
+			numEq++
+		}
+		numVars++
+		fmt.Fprintf(writer, ", x%d", numVars)
+		if numEq >= numVars {
+			break
+		}
+	}
+	fmt.Fprintf(writer, "];\n")
+
+	numEq = 0
+	numVars = 6 // 1 to 6 are used for intial position and velocity of our hailstone
 	for _, hailstone := range hailRecords {
 		for dim := 1; dim <= 3; dim++ {
-			fmt.Fprintln(writer, "  F(", currentEquation, ") = ",         // equation re-arrange to O = blah
-				hailstone.Position[dim-1],                                    // hailstone intial posn
-				" + x(", currentVariable, ") * ", hailstone.Velocity[dim-1],  // hailstone velocity * collision time
-				 " - x(", dim, ")",                                         // thrown hailstone initial pson
-				" - x(", currentVariable, ") * x(", dim + 3, ") ;")           // thrown hailstone velocity
-			currentEquation++
+			fmt.Fprintf(writer,
+				//      0 = x_a_0 + t_h_a * x_a_v - x_h_0 -  t_h_a * x_h_v
+				"eq%d = 0 == %d   +  x%d  * %d    - x%d   -   x%d  *  x%d ; \n",
+				numEq+1, hailstone.Position[dim-1], numVars+1, hailstone.Velocity[dim-1], dim, numVars+1, dim + 3,
+			)          
+			numEq++
 		}
-		currentVariable++
+		numVars++
+
+		if numEq >= numVars {
+			break
+		}
 	}
-	fmt.Fprintln(writer, "end")
-	fmt.Fprintln(writer, "x0 = zeros(", 6 + len(hailRecords), ", 1); % You may provide your own initial guess")
-	fmt.Fprintln(writer, "x0(", 1, ") = ", hailPosnAvg(hailRecords, 1), ";")
-	fmt.Fprintln(writer, "x0(", 2, ") = ", hailPosnAvg(hailRecords, 2), ";")
-	fmt.Fprintln(writer, "x0(", 3, ") = ", hailPosnAvg(hailRecords, 3), ";")
-	// fmt.Fprintln(writer, "x0(", 4, ") = 1;")
-	// fmt.Fprintln(writer, "x0(", 5, ") = 1;")
-	// fmt.Fprintln(writer, "x0(", 6, ") = 1;")
-	// fmt.Fprintln(writer, "x0(end-", len(hailRecords)-1, ":end) = (1:300);")
-	// fmt.Fprintln(writer, "options = optimoptions('fsolve', 'Display', 'off');")
-	// fmt.Fprintln(writer, "x_solution = fsolve(@equations_to_solve, x0, options);")
-	fmt.Fprintln(writer, "x_solution = fsolve(@equations_to_solve, x0);")
-	fmt.Fprintln(writer, "x_solution % Displays the solution")
-	fmt.Fprintln(writer, "fprintf('Initial position x,y,z = %.2f,%.2f,%.2f,\\n', x_solution(1:3));")
-	fmt.Fprintln(writer, "fprintf('Velocity x,y,z = %.2f,%.2f,%.2f,\\n', x_solution(4:6));")
-	fmt.Fprintln(writer, "fprintf('Answer for part 2 = %.2f\\n', (x_solution(1)+x_solution(2)+x_solution(3)));")
+
+	fmt.Fprintf(writer, "eqns = [eq1")
+	for i := 2; i <= numEq; i++ {
+		fmt.Fprintf(writer, ", eq%d", i)
+	}
+	fmt.Fprintf(writer, "];\n")
+
+	
+	fmt.Fprintln(writer, "x_solution = solve(eqns, vars);")
+	fmt.Fprintln(writer, "fprintf('Initial position x,y,z = %s,%s,%s,\\n', x_solution.x1.ascii, x_solution.x2.ascii, x_solution.x3.ascii);")
+	fmt.Fprintln(writer, "fprintf('Velocity x,y,z = %s,%s,%s,\\n', x_solution.x4.ascii, x_solution.x5.ascii, x_solution.x6.ascii);")
+	fmt.Fprintln(writer, "fprintf('Answer for part 2 = %s\\n', (x_solution.x1 + x_solution.x2 + x_solution.x3).ascii);")
 
 	/*
-	For the sample I get as expected:
-	Initial position x,y,z = 24.00,13.00,10.00,
-	Velocity x,y,z = -3.00,1.00,2.00,
-	Answer for part 2 = 47.00
+	For sample we get:
+	Initial position x,y,z = 24,13,10,
+	Velocity x,y,z = -3,1,2,
+	Answer for part 2 = 47
 	*/
 
 	return 0
