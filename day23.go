@@ -28,8 +28,6 @@ func mapPosnToId(hikingMap [][]byte) map[[2]int]uint {
 	return posnToId
 }
 
-func getId()
-
 func findLongestPath(hikingMap [][]byte) uint {
 	startPosn := [2]int{0, 1}
 	numRows := len(hikingMap)
@@ -227,7 +225,7 @@ func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
 			fmt.Println(currentPath)
 		}
 
-		if longestSoFar[currentPath.CurrentPosition] > currentPath.Visited.Count() {
+		if longestSoFar[currentPath.CurrentPosition] < currentPath.Visited.Count() {
 			longestSoFar[currentPath.CurrentPosition] = currentPath.Visited.Count()
 		}
 		dedupePaths[currentPath.HashOfPath] = true
