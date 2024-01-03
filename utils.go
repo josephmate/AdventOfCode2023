@@ -8,7 +8,7 @@ import (
 	"strings"
 )
 
-const DEBUG = false
+const DEBUG = true
 
 const UP = 0
 const RIGHT = 1

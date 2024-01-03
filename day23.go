@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"hash/fnv"
 	"os"
@@ -194,6 +195,102 @@ func (bk BitsetKey) Hash() int {
 	return int(h.Sum32())
 }
 
+func generateConnectedIds(hikingMap [][]byte, posnToId map[[2]int]uint, posn [2]int) []uint {
+	var result []uint
+	var nextRow, nextCol int
+
+	nextRow = posn[0] + 1
+	nextCol = posn[1]
+	if nextRow >= 0 &&
+		nextRow < len(hikingMap) && 
+		nextCol >= 0 &&
+		nextCol < len(hikingMap[0]) &&
+		hikingMap[nextRow][nextCol] != '#' {
+		result = append(result, posnToId[[2]int{nextRow, nextCol}])
+	}
+	nextRow = posn[0] - 1
+	nextCol = posn[1]
+	if nextRow >= 0 &&
+		nextRow < len(hikingMap) && 
+		nextCol >= 0 &&
+		nextCol < len(hikingMap[0]) &&
+		hikingMap[nextRow][nextCol] != '#' {
+		result = append(result, posnToId[[2]int{nextRow, nextCol}])
+	}
+	nextRow = posn[0]
+	nextCol = posn[1] + 1
+	if nextRow >= 0 &&
+		nextRow < len(hikingMap) && 
+		nextCol >= 0 &&
+		nextCol < len(hikingMap[0]) &&
+		hikingMap[nextRow][nextCol] != '#' {
+		result = append(result, posnToId[[2]int{nextRow, nextCol}])
+	}
+	nextRow = posn[0]
+	nextCol = posn[1] - 1
+	if nextRow >= 0 &&
+		nextRow < len(hikingMap) && 
+		nextCol >= 0 &&
+		nextCol < len(hikingMap[0]) &&
+		hikingMap[nextRow][nextCol] != '#' {
+		result = append(result, posnToId[[2]int{nextRow, nextCol}])
+	}
+	return result
+}
+
+func printAsGraphviz(hikingMap [][]byte) {
+	if !DEBUG {
+		return
+	}
+
+	posnToId := mapPosnToId(hikingMap)
+
+	edges := map[[2]uint]bool{}
+	for posn := range posnToId {
+		startId := posnToId[posn]
+		for _, connectedId := range generateConnectedIds(hikingMap, posnToId, posn) {
+			var low = startId
+			var high = connectedId
+			if high < low {
+				var tmp = low
+				low = high
+				high = tmp
+			}
+			edges[[2]uint{low, high}] = true
+		}
+	}
+
+	file, err := os.Create("dot.dot")
+	if err != nil {
+		fmt.Println("Could not open dot.dot")
+		return
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+
+	_, err = fmt.Fprintln(writer, "graph Connected_Components {")
+	if err != nil {
+		fmt.Println("Could not write to dot.dot")
+		return
+	}
+
+	for edge := range edges {
+		_, err := fmt.Fprintf(writer, "    %d -- %d [tooltip=\"%d<->%d\"]\n", edge[0], edge[1], edge[0], edge[1])
+		if err != nil {
+			fmt.Println("Could not write to dot.dot")
+			return
+		}
+	}
+
+	_, err = fmt.Fprintln(writer, "}")
+	if err != nil {
+		fmt.Println("Could not write to dot.dot")
+		return
+	}
+}
+
 /*
 at this point I realized that bloom doesn't make sense at because i can uniquely identify each position.
 which means I could create a bitset which takes up less space.
@@ -337,6 +434,7 @@ func Day23() {
 		fmt.Println(text)
 	}
 	hikingMap := ParseAs2DMatrix(text)
+	printAsGraphviz(hikingMap)
 	if DEBUG {
 		fmt.Println(hikingMap)
 	}
