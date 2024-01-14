@@ -29,6 +29,7 @@ func mapPosnToId(hikingMap [][]byte) map[[2]int]uint {
 	return posnToId
 }
 
+
 func findLongestPath(hikingMap [][]byte) uint {
 	startPosn := [2]int{0, 1}
 	numRows := len(hikingMap)
@@ -50,7 +51,7 @@ func findLongestPath(hikingMap [][]byte) uint {
 		queue = queue[1:]
 
 		if DEBUG {
-			fmt.Println(currentPath)
+			//fmt.Println(currentPath)
 		}
 
 		// we already have a longer path thru this point
@@ -291,6 +292,189 @@ func printAsGraphviz(hikingMap [][]byte) {
 	}
 }
 
+func printCompressedAsGraphviz(nodes  map[uint][]HikingMapEdge) {
+	if !DEBUG {
+		return
+	}
+
+	file, err := os.Create("dot_compressed.dot")
+	if err != nil {
+		fmt.Println("Could not open dot.dot")
+		return
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+
+	_, err = fmt.Fprintln(writer, "graph Connected_Components {")
+	if err != nil {
+		fmt.Println("Could not write to dot.dot")
+		return
+	}
+
+	for nodeId := range nodes {
+		for _, edge := range nodes[nodeId] {
+			if nodeId < edge.Destination {
+				_, err := fmt.Fprintf(writer, "    %d -- %d [label=\"%d\"]\n", nodeId, edge.Destination, edge.Cost)
+				if err != nil {
+					fmt.Println("Could not write to dot.dot")
+					return
+				}
+			}
+		}
+	}
+
+	_, err = fmt.Fprintln(writer, "}")
+	if err != nil {
+		fmt.Println("Could not write to dot.dot")
+		return
+	}
+}
+
+
+type HikingMapEdge struct {
+	Destination uint
+	Cost int
+}
+
+
+func hikingMapToGraph(hikingMap [][]byte) map[uint][]HikingMapEdge {
+	result :=  map[uint][]HikingMapEdge{}
+	
+	posnToId := mapPosnToId(hikingMap)
+	visited := map[[2]uint]bool{}
+	for posn := range posnToId {
+		startId := posnToId[posn]
+		for _, connectedId := range generateConnectedIds(hikingMap, posnToId, posn) {
+
+			
+			var low = startId
+			var high = connectedId
+			if high < low {
+				low = connectedId
+				high = startId
+			}
+			visitedPair := [2]uint{low, high}
+			if visited[visitedPair] {
+				continue
+			}
+
+			result[startId] = append(result[startId], HikingMapEdge{
+				Destination: connectedId,
+				Cost: 1,
+			})
+			result[connectedId] = append(result[connectedId], HikingMapEdge{
+				Destination: startId,
+				Cost: 1,
+			})
+
+			visited[visitedPair] = true
+		}
+	}
+	return result
+}
+
+type EdgeQueueEntry struct {
+	Current uint
+	Prev uint
+}
+
+func removeEdge(edges []HikingMapEdge, id uint) []HikingMapEdge {
+	var result []HikingMapEdge
+	for _, edge := range edges {
+		if edge.Destination != id {
+			result = append(result, edge)
+		}
+	}
+	return result
+}
+
+func compressGraph(hikingMapAsGraph map[uint][]HikingMapEdge) map[uint][]HikingMapEdge {
+
+	// BFS looking for edges of degree two
+	visited := map[uint]bool{}
+	var queue []EdgeQueueEntry
+	queue = append(queue, EdgeQueueEntry{0, 0})
+
+	for len(queue) > 0 {
+		current := queue[0]
+		queue = queue[1:]
+
+		if visited[current.Current] {
+			continue
+		}
+		visited[current.Current] = true
+
+		neighbours := hikingMapAsGraph[current.Current]
+		if len(neighbours) == 2 {
+			var next = neighbours[0]
+			var prev = neighbours[1]
+			if next.Destination == current.Prev {
+				next = neighbours[1]
+				prev = neighbours[0]
+			}
+
+			// calculate new weight
+			newWeight := prev.Cost + 1
+
+			// remove current from prev
+			hikingMapAsGraph[prev.Destination] = removeEdge(hikingMapAsGraph[prev.Destination], current.Current)
+
+			// remove current from next
+			hikingMapAsGraph[next.Destination] = removeEdge(hikingMapAsGraph[next.Destination], current.Current)
+
+			// delete current from map
+			delete(hikingMapAsGraph, current.Current)
+
+			// connect prev to next with new cost
+			hikingMapAsGraph[prev.Destination] = append(hikingMapAsGraph[prev.Destination], HikingMapEdge{
+				Destination: next.Destination,
+				Cost: newWeight,
+			})
+
+			// connect next to prev with new cost
+			hikingMapAsGraph[next.Destination] = append(hikingMapAsGraph[next.Destination], HikingMapEdge{
+				Destination: prev.Destination,
+				Cost: newWeight,
+			})
+		}
+
+		for _, neighbourId := range neighbours {
+			queue = append(queue, EdgeQueueEntry{neighbourId.Destination, current.Current})
+		}
+	}
+
+	return hikingMapAsGraph
+}
+
+
+func compressGraphIds(hikingMapAsGraph map[uint][]HikingMapEdge) map[uint][]HikingMapEdge {
+	var id uint = 1
+	oldIdToNewId := map[uint]uint{}
+	oldIdToNewId[0] = 0
+	for nodeId := range hikingMapAsGraph {
+		if nodeId != 0 {
+			oldIdToNewId[nodeId] = id
+			id++
+		}
+	}
+	
+	compressedGraph := map[uint][]HikingMapEdge{}
+	for nodeId := range hikingMapAsGraph {
+		var newEdges []HikingMapEdge
+		for _, edge := range hikingMapAsGraph[nodeId] {
+			newEdges = append(newEdges, HikingMapEdge{
+				Destination: oldIdToNewId[edge.Destination],
+				Cost: edge.Cost,
+			})
+		}
+		compressedGraph[oldIdToNewId[nodeId]] = newEdges
+	}
+
+	return compressedGraph
+}
+
 /*
 at this point I realized that bloom doesn't make sense at because i can uniquely identify each position.
 which means I could create a bitset which takes up less space.
@@ -301,6 +485,17 @@ func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
 	numCols := len(hikingMap[0])
 	endPosn := [2]int{numRows - 1, numCols - 2}
 	
+	hikingMapAsGraph := hikingMapToGraph(hikingMap)
+	if DEBUG {
+		fmt.Println("findLongestPathIgnoreSlopes", "hikingMapToGraph", hikingMapAsGraph)
+	}
+	compressedGraph := compressGraphIds(compressGraph(hikingMapAsGraph))
+	if DEBUG {
+		fmt.Println("findLongestPathIgnoreSlopes", "compressGraph", compressedGraph)
+	}
+	printCompressedAsGraphviz(compressedGraph)
+
+
 	var queue []HikingPath
 	startPath := HikingPath{}
 	startPath.CurrentPosition = startPosn
@@ -319,7 +514,7 @@ func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
 		queue = queue[1:]
 
 		if DEBUG {
-			fmt.Println(currentPath)
+			//fmt.Println(currentPath)
 		}
 
 		if longestSoFar[currentPath.CurrentPosition] < currentPath.Visited.Count() {
