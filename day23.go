@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/binary"
 	"fmt"
 	"hash/fnv"
 	"os"
@@ -12,6 +14,13 @@ import (
 type HikingPath struct {
 	CurrentPosition [2]int
 	HashOfPath      uint
+	Visited    *bitset.BitSet
+}
+
+type CompressedHikingPath struct {
+	CurrentPosition uint
+	HashOfPath      uint64
+	CostSoFar       uint
 	Visited    *bitset.BitSet
 }
 
@@ -159,6 +168,10 @@ https://stackoverflow.com/questions/28326965/good-hash-function-for-list-of-inte
 */
 func hash(hikingMap [][]byte, posn [2]int) uint {
 	var x = uint(posn[0]*len(hikingMap[0]) + posn[1])
+	return hashId(x)
+}
+
+func hashId(x uint) uint {
 	x ^= x >> 17;
 	x *= uint(0xed5ad4bb);
 	x ^= x >> 11;
@@ -335,11 +348,11 @@ func printCompressedAsGraphviz(nodes  map[uint][]HikingMapEdge) {
 
 type HikingMapEdge struct {
 	Destination uint
-	Cost int
+	Cost uint
 }
 
 
-func hikingMapToGraph(hikingMap [][]byte) map[uint][]HikingMapEdge {
+func hikingMapToGraph(hikingMap [][]byte) (map[uint][]HikingMapEdge, map[[2]int]uint) {
 	result :=  map[uint][]HikingMapEdge{}
 	
 	posnToId := mapPosnToId(hikingMap)
@@ -372,7 +385,7 @@ func hikingMapToGraph(hikingMap [][]byte) map[uint][]HikingMapEdge {
 			visited[visitedPair] = true
 		}
 	}
-	return result
+	return result, posnToId
 }
 
 type EdgeQueueEntry struct {
@@ -449,15 +462,13 @@ func compressGraph(hikingMapAsGraph map[uint][]HikingMapEdge) map[uint][]HikingM
 }
 
 
-func compressGraphIds(hikingMapAsGraph map[uint][]HikingMapEdge) map[uint][]HikingMapEdge {
+func compressGraphIds(hikingMapAsGraph map[uint][]HikingMapEdge) (map[uint][]HikingMapEdge, map[uint]uint) {
 	var id uint = 1
 	oldIdToNewId := map[uint]uint{}
 	oldIdToNewId[0] = 0
 	for nodeId := range hikingMapAsGraph {
-		if nodeId != 0 {
-			oldIdToNewId[nodeId] = id
-			id++
-		}
+		oldIdToNewId[nodeId] = id
+		id++
 	}
 	
 	compressedGraph := map[uint][]HikingMapEdge{}
@@ -472,7 +483,24 @@ func compressGraphIds(hikingMapAsGraph map[uint][]HikingMapEdge) map[uint][]Hiki
 		compressedGraph[oldIdToNewId[nodeId]] = newEdges
 	}
 
-	return compressedGraph
+	return compressedGraph, oldIdToNewId
+}
+
+func bitSetToUint64(bitset *bitset.BitSet) uint64 {
+	var buf bytes.Buffer
+	_, err := bitset.WriteTo(&buf)
+	if err != nil {
+		fmt.Println("Failed to write to buffer", err)
+		os.Exit(-1)
+	}
+	var value uint64
+	err2 := binary.Read(&buf, binary.LittleEndian, &value)
+	if err2 != nil {
+		fmt.Println("Error:", err)
+		os.Exit(-1)
+	}
+
+	return value
 }
 
 /*
@@ -485,27 +513,28 @@ func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
 	numCols := len(hikingMap[0])
 	endPosn := [2]int{numRows - 1, numCols - 2}
 	
-	hikingMapAsGraph := hikingMapToGraph(hikingMap)
+	hikingMapAsGraph, posnToId := hikingMapToGraph(hikingMap)
 	if DEBUG {
 		fmt.Println("findLongestPathIgnoreSlopes", "hikingMapToGraph", hikingMapAsGraph)
 	}
-	compressedGraph := compressGraphIds(compressGraph(hikingMapAsGraph))
+	compressedGraph, idToCompressedId := compressGraphIds(compressGraph(hikingMapAsGraph))
 	if DEBUG {
 		fmt.Println("findLongestPathIgnoreSlopes", "compressGraph", compressedGraph)
 	}
 	printCompressedAsGraphviz(compressedGraph)
 
 
-	var queue []HikingPath
-	startPath := HikingPath{}
-	startPath.CurrentPosition = startPosn
-	startPath.Visited = bitset.New(64)
-	posnToId := mapPosnToId(hikingMap)
+	var queue []CompressedHikingPath
+	startPath := CompressedHikingPath{}
+	startCompressedId := idToCompressedId[posnToId[startPosn]]
+	startPath.CurrentPosition = startCompressedId
+	startPath.Visited = bitset.New(64) // will never exceed 64 bits (1 long)
 	startPath.Visited.Set(posnToId[startPosn])
-	startPath.HashOfPath = hash(hikingMap, startPosn)
+	startPath.HashOfPath = bitSetToUint64(startPath.Visited)
+	startPath.CostSoFar = 0
 	queue = append(queue, startPath)
 
-	longestSoFar := map[[2]int]uint{}
+	longestSoFar := map[uint]uint{}
 	// try to deduplicate paths using the hash of the path so far
 	dedupePaths := map[uint]bool{}
 
@@ -517,102 +546,33 @@ func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
 			//fmt.Println(currentPath)
 		}
 
-		if longestSoFar[currentPath.CurrentPosition] < currentPath.Visited.Count() {
-			longestSoFar[currentPath.CurrentPosition] = currentPath.Visited.Count()
-		}
-		dedupePaths[currentPath.HashOfPath] = true
-
-		// out of bounds
-		if currentPath.CurrentPosition[0] < 0 ||
-			currentPath.CurrentPosition[0] >= len(hikingMap) ||
-			currentPath.CurrentPosition[1] < 0 ||
-			currentPath.CurrentPosition[1] >= len(hikingMap[0]) {
+		if dedupePaths[currentPath.HashOfPath] {
 			continue
 		}
-
-		currentTerrain := hikingMap[currentPath.CurrentPosition[0]][currentPath.CurrentPosition[1]]
-		if currentTerrain == '#' {
-			continue // cannot travel thru the forest
+		dedupePaths[currentPath.HashOfPath] = true
+		if longestSoFar[currentPath.CurrentPosition] < currentPath.CostSoFar {
+			longestSoFar[currentPath.CurrentPosition] = currentPath.CostSoFar
 		}
 
-		var nextPosn = [2]int{currentPath.CurrentPosition[0], currentPath.CurrentPosition[1] + 1}
-		var nextHash = currentPath.HashOfPath + hash(hikingMap, nextPosn)
-		if !dedupePaths[nextHash] &&
-			nextPosn[0] >= 0 &&
-			nextPosn[0] < len(hikingMap) &&
-			nextPosn[1] >= 0 &&
-			nextPosn[1] < len(hikingMap[0]) &&
-			hikingMap[nextPosn[0]][nextPosn[1]] != '#' &&
-			!currentPath.Visited.Test(posnToId[nextPosn]) {
-				newBitSet := currentPath.Visited.Clone()
-				newBitSet.Set(posnToId[nextPosn])
-				nextPath := HikingPath{
-					CurrentPosition: nextPosn,
-					HashOfPath: currentPath.HashOfPath + nextHash,
-					Visited: newBitSet,
-				}
-				queue = append(queue, nextPath)
-		}
-
-		nextPosn = [2]int{currentPath.CurrentPosition[0] + 1, currentPath.CurrentPosition[1]}
-		nextHash = currentPath.HashOfPath + hash(hikingMap, nextPosn)
-		if !dedupePaths[nextHash] &&
-			nextPosn[0] >= 0 &&
-			nextPosn[0] < len(hikingMap) &&
-			nextPosn[1] >= 0 &&
-			nextPosn[1] < len(hikingMap[0]) &&
-			hikingMap[nextPosn[0]][nextPosn[1]] != '#' &&
-			!currentPath.Visited.Test(posnToId[nextPosn]) {
-				newBitSet := currentPath.Visited.Clone()
-				newBitSet.Set(posnToId[nextPosn])
-				nextPath := HikingPath{
-					CurrentPosition: nextPosn,
-					HashOfPath: currentPath.HashOfPath + nextHash,
-					Visited: newBitSet,
-				}
-				queue = append(queue, nextPath)
-		}
-
-		nextPosn = [2]int{currentPath.CurrentPosition[0], currentPath.CurrentPosition[1] - 1}
-		nextHash = currentPath.HashOfPath + hash(hikingMap, nextPosn)
-		if !dedupePaths[nextHash] &&
-			nextPosn[0] >= 0 &&
-			nextPosn[0] < len(hikingMap) &&
-			nextPosn[1] >= 0 &&
-			nextPosn[1] < len(hikingMap[0]) &&
-			hikingMap[nextPosn[0]][nextPosn[1]] != '#'  &&
-			!currentPath.Visited.Test(posnToId[nextPosn]){
-				newBitSet := currentPath.Visited.Clone()
-				newBitSet.Set(posnToId[nextPosn])
-				nextPath := HikingPath{
-					CurrentPosition: nextPosn,
-					HashOfPath: currentPath.HashOfPath + nextHash,
-					Visited: newBitSet,
-				}
-				queue = append(queue, nextPath)
-		}
-
-		nextPosn = [2]int{currentPath.CurrentPosition[0] - 1, currentPath.CurrentPosition[1]}
-		nextHash = currentPath.HashOfPath + hash(hikingMap, nextPosn)
-		if !dedupePaths[nextHash] &&
-			nextPosn[0] >= 0 &&
-			nextPosn[0] < len(hikingMap) &&
-			nextPosn[1] >= 0 &&
-			nextPosn[1] < len(hikingMap[0]) &&
-			hikingMap[nextPosn[0]][nextPosn[1]] != '#' &&
-			!currentPath.Visited.Test(posnToId[nextPosn]) {
-				newBitSet := currentPath.Visited.Clone()
-				newBitSet.Set(posnToId[nextPosn])
-				nextPath := HikingPath{
-					CurrentPosition: nextPosn,
-					HashOfPath: currentPath.HashOfPath + nextHash,
-					Visited: newBitSet,
-				}
-				queue = append(queue, nextPath)
+		for _, edge := range compressedGraph[currentPath.CurrentPosition] {
+			nextHash := currentPath.HashOfPath + hashId(edge.Destination)
+			if !dedupePaths[nextHash] &&
+				!currentPath.Visited.Test(edge.Destination) {
+					newBitSet := currentPath.Visited.Clone()
+					newBitSet.Set(edge.Destination)
+					nextPath := CompressedHikingPath{
+						CurrentPosition: edge.Destination,
+						HashOfPath: nextHash,
+						CostSoFar: currentPath.CostSoFar + edge.Cost,
+						Visited: newBitSet,
+					}
+					queue = append(queue, nextPath)
+			}
 		}
 	}
 
-	return longestSoFar[endPosn] - 1
+	endId := idToCompressedId[posnToId[endPosn]]
+	return longestSoFar[endId] - 1
 }
 
 func Day23() {
