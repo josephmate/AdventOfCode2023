@@ -756,7 +756,7 @@ which means I could create a bitset which takes up less space.
 -----        -----        -----        -----        -----       -----
 
 */
-func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
+func findLongestPathIgnoreSlopesv1(hikingMap [][]byte) uint {
 	startPosn := [2]int{0, 1}
 	numRows := len(hikingMap)
 	numCols := len(hikingMap[0])
@@ -822,8 +822,31 @@ func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
 		}
 	}
 
+	if DEBUG {
+		for key := range longestSoFar {
+			fmt.Println("findLongestPathIgnoreSlopes", "longestSoFar", key, "->", longestSoFar[key])
+		}
+	}
+
 	endId := posnToId[endPosn]
 	return longestSoFar[endId]
+}
+
+func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
+	// startPosn := [2]int{0, 1}
+	// numRows := len(hikingMap)
+	// numCols := len(hikingMap[0])
+	// endPosn := [2]int{numRows - 1, numCols - 2}
+	
+	graph, posnToId := hikingMapToGraphv2(hikingMap)
+	if DEBUG {
+		fmt.Println("findLongestPathIgnoreSlopes", "compressGraph", graph)
+		fmt.Println("findLongestPathIgnoreSlopes", "idToCompressedId", posnToId)
+	}
+	
+	printCompressedAsGraphviz(graph)
+
+	return 0
 }
 
 func Day23() {
