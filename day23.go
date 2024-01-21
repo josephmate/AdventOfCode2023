@@ -478,7 +478,9 @@ func hikingMapToGraphv2(hikingMap [][]byte) (map[uint][]HikingMapEdge, map[[2]in
 			if visited[current.Current] {
 				continue
 			}
-			visited[current.Current] = true
+			if len(nextPosns) > 2 {
+				visited[current.Current] = true
+			}
 
 
 			if len(nextPosns) == 1 && current.Current == startPosn{
@@ -524,7 +526,7 @@ func hikingMapToGraphv2(hikingMap [][]byte) (map[uint][]HikingMapEdge, map[[2]in
 				}
 
 				for _, nextPosn := range nextPosns {
-					if !visited[nextPosn] {
+					if nextPosn != current.Prev {
 						queue = append(queue, MapTracker{
 							StartId: currentPosnId,
 							Current: nextPosn,
@@ -536,7 +538,6 @@ func hikingMapToGraphv2(hikingMap [][]byte) (map[uint][]HikingMapEdge, map[[2]in
 			} else  {
 				if DEBUG {
 					fmt.Println("hikingMapToGraphv2", "nowhere to go for deadend", current.Current)
-
 				}
 			}
     }
@@ -732,11 +733,11 @@ which means I could create a bitset which takes up less space.
 
            
                                        -----        -----
-                                       | 7 | --38-- | 6 |
-                                       -----        -----
-                                                      |
-                                                     10
-                                                      |
+                ----------22---------  | 7 | --38-- | 6 |
+               |                       -----        -----
+               |                                      |
+               |                                     10
+               |                                      |
 -----        -----        -----        -----        -----       -----
 | 0 | --15-- | 1 | --22-- | 2 | --30-- | 3 | --10-- | 4 | --5-- | 5 |
 -----        -----        -----        -----        -----       -----
