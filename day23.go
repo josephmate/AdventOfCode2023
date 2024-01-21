@@ -3,7 +3,8 @@ package main
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
+
+	//"encoding/binary"
 	"fmt"
 	"hash/fnv"
 	"os"
@@ -19,7 +20,7 @@ type HikingPath struct {
 
 type CompressedHikingPath struct {
 	CurrentPosition uint
-	HashOfPath      uint64
+	HashOfPath      string
 	CostSoFar       uint
 	Visited    *bitset.BitSet
 }
@@ -252,6 +253,49 @@ func generateConnectedIds(hikingMap [][]byte, posnToId map[[2]int]uint, posn [2]
 	return result
 }
 
+func generateConnected(hikingMap [][]byte, posn [2]int) [][2]int {
+	var result [][2]int
+	var nextRow, nextCol int
+
+	nextRow = posn[0] + 1
+	nextCol = posn[1]
+	if nextRow >= 0 &&
+		nextRow < len(hikingMap) && 
+		nextCol >= 0 &&
+		nextCol < len(hikingMap[0]) &&
+		hikingMap[nextRow][nextCol] != '#' {
+		result = append(result, [2]int{nextRow, nextCol})
+	}
+	nextRow = posn[0] - 1
+	nextCol = posn[1]
+	if nextRow >= 0 &&
+		nextRow < len(hikingMap) && 
+		nextCol >= 0 &&
+		nextCol < len(hikingMap[0]) &&
+		hikingMap[nextRow][nextCol] != '#' {
+		result = append(result, [2]int{nextRow, nextCol})
+	}
+	nextRow = posn[0]
+	nextCol = posn[1] + 1
+	if nextRow >= 0 &&
+		nextRow < len(hikingMap) && 
+		nextCol >= 0 &&
+		nextCol < len(hikingMap[0]) &&
+		hikingMap[nextRow][nextCol] != '#' {
+		result = append(result, [2]int{nextRow, nextCol})
+	}
+	nextRow = posn[0]
+	nextCol = posn[1] - 1
+	if nextRow >= 0 &&
+		nextRow < len(hikingMap) && 
+		nextCol >= 0 &&
+		nextCol < len(hikingMap[0]) &&
+		hikingMap[nextRow][nextCol] != '#' {
+		result = append(result, [2]int{nextRow, nextCol})
+	}
+	return result
+}
+
 func printAsGraphviz(hikingMap [][]byte) {
 	if !DEBUG {
 		return
@@ -351,6 +395,154 @@ type HikingMapEdge struct {
 	Cost uint
 }
 
+type MapTracker struct {
+	StartId     uint
+	Current     [2]int
+	Prev     	  [2]int
+	CostSoFar   uint
+}
+
+func hikingMapToGraphv2(hikingMap [][]byte) (map[uint][]HikingMapEdge, map[[2]int]uint) {
+	startPosn := [2]int{0, 1}
+    var idCounter uint = 1
+    var queue []MapTracker
+    queue = append(queue, MapTracker{
+        StartId: 0,
+        Current: startPosn,
+        Prev: [2]int{-1,-1},
+        CostSoFar: 0,
+    })
+
+    visited := map[[2]int]bool{}
+    posnToId := map[[2]int]uint{}
+    posnToId[startPosn] = 0
+    
+    result := map[uint][]HikingMapEdge{}
+
+    for len(queue) > 0 {
+			current := queue[0]
+			queue = queue[1:]
+			
+			nextPosns := generateConnected(hikingMap, current.Current)
+			if len(nextPosns) == 1 && current.Current != startPosn {
+				// dead end
+				// generate a new id and stop unless we're at the startPosn, then keep going
+				if DEBUG {
+					fmt.Println("hikingMapToGraphv2", "dead end", current.Current, current.StartId, "->", idCounter)
+				}
+				result[idCounter] = append(result[idCounter], HikingMapEdge {
+						Destination: current.StartId,
+						Cost: current.CostSoFar,
+				})
+				result[current.StartId] = append(result[current.StartId], HikingMapEdge {
+						Destination: idCounter,
+						Cost: current.CostSoFar,
+				})
+				posnToId[current.Current] = idCounter
+				idCounter++
+			} else if len(nextPosns) > 2 {
+				// generate a new id and split or re-use existing
+				var currentPosnId uint
+				currentPosnId, hasIt := posnToId[current.Current]
+				if !hasIt {
+					currentPosnId = idCounter
+					posnToId[current.Current] = idCounter
+					idCounter++
+				}
+
+				if DEBUG {
+					if hasIt {
+						fmt.Println("hikingMapToGraphv2", "existing node", current.Current, current.StartId, "->", currentPosnId)
+					} else {
+						fmt.Println("hikingMapToGraphv2", "new node", current.Current, current.StartId, "->", currentPosnId)
+					}
+				}
+				result[currentPosnId] = append(result[currentPosnId], HikingMapEdge {
+					Destination: current.StartId,
+					Cost: current.CostSoFar,
+				})
+				result[current.StartId] = append(result[current.StartId], HikingMapEdge {
+					Destination: currentPosnId,
+					Cost: current.CostSoFar,
+				})
+			} else if len(nextPosns) == 2 {
+				if DEBUG {
+					fmt.Println("hikingMapToGraphv2", "nothing to record for internal node", current.Current)
+				}
+			} else {
+				if DEBUG {
+					fmt.Println("hikingMapToGraphv2", "nothing to record for start node", current.Current)
+				}
+			}
+
+			if visited[current.Current] {
+				continue
+			}
+			visited[current.Current] = true
+
+
+			if len(nextPosns) == 1 && current.Current == startPosn{
+				// dead end
+				// generate a new id and stop unless we're at the startPosn, then keep going
+				nextPosn := nextPosns[0]
+				if DEBUG {
+					fmt.Println("hikingMapToGraphv2", "foundStart", current.Current)
+				}
+				queue = append(queue, MapTracker{
+						StartId: 0,
+						Current: nextPosn,
+						Prev: current.Current,
+						CostSoFar: 1,
+				})
+			} else if len(nextPosns) == 2 {
+				// keep going
+				// figure out which direction to go by looking at visited
+				var nextPosn = nextPosns[0]
+				if nextPosns[0] == current.Prev{
+						nextPosn = nextPosns[1]
+				} else if nextPosns[1] != current.Prev && nextPosns[0] != current.Prev{
+						fmt.Println("some how already visited both", "current", current, "nextPosns", nextPosns)
+						os.Exit(-1)
+				}
+
+				if DEBUG {
+					fmt.Println("hikingMapToGraphv2", "compressing edge", current.Current)
+				}
+				queue = append(queue, MapTracker{
+						StartId: current.StartId,
+						Current: nextPosn,
+						Prev: current.Current,
+						CostSoFar: current.CostSoFar + 1,
+				})
+			} else if len(nextPosns) > 2 {
+				// generate a new id and split or re-use existing
+				var currentPosnId uint
+				currentPosnId, hasIt := posnToId[current.Current]
+				if !hasIt {
+					fmt.Println("hikingMapToGraphv2", "currentPosnId shouldn't be missing", current.Current)
+					os.Exit(-1)
+				}
+
+				for _, nextPosn := range nextPosns {
+					if !visited[nextPosn] {
+						queue = append(queue, MapTracker{
+							StartId: currentPosnId,
+							Current: nextPosn,
+							Prev: current.Current,
+							CostSoFar: 1,
+						})
+					}
+				}
+			} else  {
+				if DEBUG {
+					fmt.Println("hikingMapToGraphv2", "nowhere to go for deadend", current.Current)
+
+				}
+			}
+    }
+
+		return result, posnToId
+}
 
 func hikingMapToGraph(hikingMap [][]byte) (map[uint][]HikingMapEdge, map[[2]int]uint) {
 	result :=  map[uint][]HikingMapEdge{}
@@ -360,8 +552,6 @@ func hikingMapToGraph(hikingMap [][]byte) (map[uint][]HikingMapEdge, map[[2]int]
 	for posn := range posnToId {
 		startId := posnToId[posn]
 		for _, connectedId := range generateConnectedIds(hikingMap, posnToId, posn) {
-
-			
 			var low = startId
 			var high = connectedId
 			if high < low {
@@ -486,26 +676,71 @@ func compressGraphIds(hikingMapAsGraph map[uint][]HikingMapEdge) (map[uint][]Hik
 	return compressedGraph, oldIdToNewId
 }
 
-func bitSetToUint64(bitset *bitset.BitSet) uint64 {
+func bitSetToUint64(bitset *bitset.BitSet) string {
 	var buf bytes.Buffer
 	_, err := bitset.WriteTo(&buf)
+    /*
+    if DEBUG {
+        fmt.Println("bitSetToUint64", "writtenBytes", writtenBytes)
+        fmt.Println("bitSetToUint64", "len(buf)", buf.Len())
+        
+    }
+    */
 	if err != nil {
 		fmt.Println("Failed to write to buffer", err)
 		os.Exit(-1)
 	}
+    /*
 	var value uint64
 	err2 := binary.Read(&buf, binary.LittleEndian, &value)
 	if err2 != nil {
 		fmt.Println("Error:", err)
 		os.Exit(-1)
 	}
+    */
 
-	return value
+	return buf.String()
 }
 
 /*
 at this point I realized that bloom doesn't make sense at because i can uniquely identify each position.
 which means I could create a bitset which takes up less space.
+
+#0#####################
+#.......#########...###
+#######.#########.#.###
+###.....#.>2>.###.#.###
+###v#####.#v#.###.#.###
+###1>...#.#.#.....#...#
+###v###.#.#.#########.#
+###...#.#.#.......#...#
+#####.#.#.#######.#.###
+#.....#.#.#.......#...#
+#.#####.#.#.#########v#
+#.#...#...#...###...>3#
+#.#.#v#######v###.###v#
+#...#7>.#...>.>.#.###.#
+#####v#.#.###v#.#.###.#
+#.....#...#...#.#.#...#
+#.#########.###.#.#.###
+#...###...#...#...#.###
+###.###.#.###v#####v###
+#...#...#.#.>6>.#.>4###
+#.###.###.#.###.#.#v###
+#.....###...###...#...#
+#####################5#
+
+           
+                                       -----        -----
+                                       | 7 | --38-- | 6 |
+                                       -----        -----
+                                                      |
+                                                     10
+                                                      |
+-----        -----        -----        -----        -----       -----
+| 0 | --15-- | 1 | --22-- | 2 | --30-- | 3 | --10-- | 4 | --5-- | 5 |
+-----        -----        -----        -----        -----       -----
+
 */
 func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
 	startPosn := [2]int{0, 1}
@@ -513,20 +748,17 @@ func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
 	numCols := len(hikingMap[0])
 	endPosn := [2]int{numRows - 1, numCols - 2}
 	
-	hikingMapAsGraph, posnToId := hikingMapToGraph(hikingMap)
+	graph, posnToId := hikingMapToGraphv2(hikingMap)
 	if DEBUG {
-		fmt.Println("findLongestPathIgnoreSlopes", "hikingMapToGraph", hikingMapAsGraph)
+		fmt.Println("findLongestPathIgnoreSlopes", "compressGraph", graph)
+		fmt.Println("findLongestPathIgnoreSlopes", "idToCompressedId", posnToId)
 	}
-	compressedGraph, idToCompressedId := compressGraphIds(compressGraph(hikingMapAsGraph))
-	if DEBUG {
-		fmt.Println("findLongestPathIgnoreSlopes", "compressGraph", compressedGraph)
-	}
-	printCompressedAsGraphviz(compressedGraph)
+	printCompressedAsGraphviz(graph)
 
 
 	var queue []CompressedHikingPath
 	startPath := CompressedHikingPath{}
-	startCompressedId := idToCompressedId[posnToId[startPosn]]
+	startCompressedId := posnToId[startPosn]
 	startPath.CurrentPosition = startCompressedId
 	startPath.Visited = bitset.New(64) // will never exceed 64 bits (1 long)
 	startPath.Visited.Set(posnToId[startPosn])
@@ -536,7 +768,7 @@ func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
 
 	longestSoFar := map[uint]uint{}
 	// try to deduplicate paths using the hash of the path so far
-	dedupePaths := map[uint]bool{}
+	dedupePaths := map[string]bool{}
 
 	for len(queue) > 0 {
 		currentPath := queue[0]
@@ -554,25 +786,30 @@ func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
 			longestSoFar[currentPath.CurrentPosition] = currentPath.CostSoFar
 		}
 
-		for _, edge := range compressedGraph[currentPath.CurrentPosition] {
-			nextHash := currentPath.HashOfPath + hashId(edge.Destination)
-			if !dedupePaths[nextHash] &&
-				!currentPath.Visited.Test(edge.Destination) {
-					newBitSet := currentPath.Visited.Clone()
-					newBitSet.Set(edge.Destination)
-					nextPath := CompressedHikingPath{
-						CurrentPosition: edge.Destination,
-						HashOfPath: nextHash,
-						CostSoFar: currentPath.CostSoFar + edge.Cost,
-						Visited: newBitSet,
-					}
-					queue = append(queue, nextPath)
+		for _, edge := range graph[currentPath.CurrentPosition] {
+			if !currentPath.Visited.Test(edge.Destination) {
+                newBitSet := currentPath.Visited.Clone()
+                newBitSet.Set(edge.Destination)
+                nextHash := bitSetToUint64(newBitSet)
+                if dedupePaths[nextHash] {
+                    continue
+                }
+                nextPath := CompressedHikingPath{
+                    CurrentPosition: edge.Destination,
+                    HashOfPath: nextHash,
+                    CostSoFar: currentPath.CostSoFar + edge.Cost,
+                    Visited: newBitSet,
+                }
+                if DEBUG {
+                    fmt.Println("findLongestPathIgnoreSlopes", "curr->next", currentPath.CurrentPosition, "->", edge.Destination)
+                }
+                queue = append(queue, nextPath)
 			}
 		}
 	}
 
-	endId := idToCompressedId[posnToId[endPosn]]
-	return longestSoFar[endId] - 1
+	endId := posnToId[endPosn]
+	return longestSoFar[endId]
 }
 
 func Day23() {
