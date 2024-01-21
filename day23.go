@@ -402,6 +402,15 @@ type MapTracker struct {
 	CostSoFar   uint
 }
 
+func containsEdge(edges []HikingMapEdge, destination uint) bool {
+	for _, edge := range edges {
+		if destination == edge.Destination {
+			return true
+		}
+	}
+	return false
+}
+
 func hikingMapToGraphv2(hikingMap [][]byte) (map[uint][]HikingMapEdge, map[[2]int]uint) {
 	startPosn := [2]int{0, 1}
     var idCounter uint = 1
@@ -457,14 +466,18 @@ func hikingMapToGraphv2(hikingMap [][]byte) (map[uint][]HikingMapEdge, map[[2]in
 						fmt.Println("hikingMapToGraphv2", "new node", current.Current, current.StartId, "->", currentPosnId)
 					}
 				}
-				result[currentPosnId] = append(result[currentPosnId], HikingMapEdge {
-					Destination: current.StartId,
-					Cost: current.CostSoFar,
-				})
-				result[current.StartId] = append(result[current.StartId], HikingMapEdge {
-					Destination: currentPosnId,
-					Cost: current.CostSoFar,
-				})
+
+				
+				if !containsEdge(result[currentPosnId], current.StartId) {
+					result[currentPosnId] = append(result[currentPosnId], HikingMapEdge {
+						Destination: current.StartId,
+						Cost: current.CostSoFar,
+					})
+					result[current.StartId] = append(result[current.StartId], HikingMapEdge {
+						Destination: currentPosnId,
+						Cost: current.CostSoFar,
+					})
+				}
 			} else if len(nextPosns) == 2 {
 				if DEBUG {
 					fmt.Println("hikingMapToGraphv2", "nothing to record for internal node", current.Current)
