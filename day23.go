@@ -832,21 +832,51 @@ func findLongestPathIgnoreSlopesv1(hikingMap [][]byte) uint {
 	return longestSoFar[endId]
 }
 
-func findLongestPathIgnoreSlopes(hikingMap [][]byte) uint {
-	// startPosn := [2]int{0, 1}
-	// numRows := len(hikingMap)
-	// numCols := len(hikingMap[0])
-	// endPosn := [2]int{numRows - 1, numCols - 2}
-	
+func findLongestPathRecursive(
+	graph map[uint][]HikingMapEdge,
+	startId uint,
+	endId uint,
+	visited *bitset.BitSet,
+	longestPaths map[uint]int) int {
+
+		if startId == endId {
+			return 0
+		}
+
+		var maxSoFar int = -1
+		for _, edge := range graph[startId] {
+			if !visited.Test(edge.Destination) {
+				visited.Set(edge.Destination)
+				current := int(edge.Cost) + findLongestPathRecursive(graph, edge.Destination, endId, visited, longestPaths)
+				visited.Clear(edge.Destination)
+				if current > maxSoFar {
+					maxSoFar = current
+				}
+			}
+		}
+
+		return maxSoFar
+}
+
+func findLongestPathIgnoreSlopes(hikingMap [][]byte) int {
 	graph, posnToId := hikingMapToGraphv2(hikingMap)
 	if DEBUG {
 		fmt.Println("findLongestPathIgnoreSlopes", "compressGraph", graph)
 		fmt.Println("findLongestPathIgnoreSlopes", "idToCompressedId", posnToId)
 	}
-	
 	printCompressedAsGraphviz(graph)
 
-	return 0
+	startPosn := [2]int{0, 1}
+	numRows := len(hikingMap)
+	numCols := len(hikingMap[0])
+	endPosn := [2]int{numRows - 1, numCols - 2}
+	startId := posnToId[startPosn]
+	endId := posnToId[endPosn]
+
+	longestPaths := map[uint]int{}
+	visited := bitset.New(64)
+	visited.Set(startId)
+	return findLongestPathRecursive(graph, startId, endId, visited, longestPaths)
 }
 
 func Day23() {
