@@ -12,7 +12,11 @@ func parseBricks(input string) ([][2][3]int, error) {
 	result := make([][2][3]int, len(lines))
 
 	for i, line := range lines {
-		parts := strings.Split(line, "~")
+        trimmedLine := strings.TrimSpace(line)
+        if len(trimmedLine) == 0 {
+            continue
+        }
+		parts := strings.Split(trimmedLine, "~")
 		if len(parts) != 2 {
 			return nil, fmt.Errorf("invalid input format at line %d", i+1)
 		}
@@ -60,8 +64,21 @@ func canMoveDown(posnToBrickId map[[3]int]int, brick [][3]int, brickId int) bool
 	return true
 }
 
-func simulateFallingBricks(brickIdToPosn map[int][][3]int, posnToBrickId map[[3]int]int) {
+func moveBrickDown(posnToBrickId map[[3]int]int, brick [][3]int, brickId int) {
+	for idx, _ := range brick {
+        delete(posnToBrickId, brick[idx])
+        brick[idx][2] = brick[idx][2]-1
+        posnToBrickId[brick[idx]] = brickId
+	}
+
+    if DEBUG {
+        fmt.Println("moveBrickDown", brick)
+    }
+}
+
+func simulateFallingBricks(brickIdToPosn map[int][][3]int, posnToBrickId map[[3]int]int) bool {
 	var somethingChanged = true
+	var atLeastOneThingChanged = false
 
 	for somethingChanged {
 		somethingChanged = false
@@ -69,10 +86,51 @@ func simulateFallingBricks(brickIdToPosn map[int][][3]int, posnToBrickId map[[3]
 		for brickId := range brickIdToPosn {
 			brickPosns := brickIdToPosn[brickId]
 			
+            if canMoveDown(posnToBrickId, brickPosns, brickId) {
+                if DEBUG {
+                    fmt.Println("simulateFallingBricks", brickPosns)
+                }
+                somethingChanged = true
+                atLeastOneThingChanged = true
+                moveBrickDown(posnToBrickId, brickPosns, brickId)
+
+                if DEBUG {
+                    fmt.Println("simulateFallingBricks", "after", brickPosns)
+                }
+            }
 		}
+
 	}
+
+    return atLeastOneThingChanged
 }
 
+func canRemoveBrick(brickIdToPosn map[int][][3]int, posnToBrickId map[[3]int]int, brickId int) bool {
+    copyBrickIdToPosn := map[int][][3]int{}
+    copyPosnToBrickId := map[[3]int]int{}
+    for brickIdToCopy := range brickIdToPosn {
+        if brickIdToCopy != brickId {
+            brickToCopy := brickIdToPosn[brickIdToCopy]
+            var copiedBrick [][3]int
+            for _, col := range brickToCopy {
+                copyPosnToBrickId[col] = brickIdToCopy
+                copiedBrick = append(copiedBrick, [3]int{col[0],col[1],col[2]})
+            }
+            copyBrickIdToPosn[brickIdToCopy] = copiedBrick
+        }
+    }
+    
+    return !simulateFallingBricks(copyBrickIdToPosn,copyPosnToBrickId)
+}
+
+/**
+ * 360 was too low for my input
+ * this solution solved the sample input though
+ * if you re-run, it gives a different answer each time
+ * that means my bug is causing the other in which you move the bricks down to matter.
+ * the issue was with my copying. i was still having references leaking back to the original data.
+ * after fixing that bug 391 was still too low.
+ */
 func countRemovableBricks(bricks [][2][3]int) int {
 
 	brickIdToPosn := map[int][][3]int{}
@@ -101,7 +159,21 @@ func countRemovableBricks(bricks [][2][3]int) int {
 		fmt.Println("countRemovableBricks", "posnToBrickId", posnToBrickId)
 	}
 
-	return 0
+    simulateFallingBricks(brickIdToPosn,posnToBrickId)
+
+	if DEBUG {
+		fmt.Println("simulateFallingBricks", "brickIdToPosn", brickIdToPosn)
+		fmt.Println("simulateFallingBricks", "posnToBrickId", posnToBrickId)
+	}
+
+    var safeBricks = 0
+    for brickId := range brickIdToPosn {
+        if canRemoveBrick(brickIdToPosn,posnToBrickId, brickId) {
+            safeBricks++
+        }
+    }
+
+	return safeBricks
 }
 
 func Day22() {
