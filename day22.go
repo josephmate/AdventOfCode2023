@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
 	"strconv"
@@ -70,10 +71,6 @@ func moveBrickDown(posnToBrickId map[[3]int]int, brick [][3]int, brickId int) {
         brick[idx][2] = brick[idx][2]-1
         posnToBrickId[brick[idx]] = brickId
 	}
-
-    if DEBUG {
-        fmt.Println("moveBrickDown", brick)
-    }
 }
 
 func simulateFallingBricks(brickIdToPosn map[int][][3]int, posnToBrickId map[[3]int]int) bool {
@@ -86,26 +83,19 @@ func simulateFallingBricks(brickIdToPosn map[int][][3]int, posnToBrickId map[[3]
 		for brickId := range brickIdToPosn {
 			brickPosns := brickIdToPosn[brickId]
 			
-            if canMoveDown(posnToBrickId, brickPosns, brickId) {
-                if DEBUG {
-                    fmt.Println("simulateFallingBricks", brickPosns)
-                }
-                somethingChanged = true
-                atLeastOneThingChanged = true
-                moveBrickDown(posnToBrickId, brickPosns, brickId)
-
-                if DEBUG {
-                    fmt.Println("simulateFallingBricks", "after", brickPosns)
-                }
-            }
+			if canMoveDown(posnToBrickId, brickPosns, brickId) {
+					somethingChanged = true
+					atLeastOneThingChanged = true
+					moveBrickDown(posnToBrickId, brickPosns, brickId)
+			}
 		}
 
 	}
 
-    return atLeastOneThingChanged
+	return atLeastOneThingChanged
 }
 
-func canRemoveBrick(brickIdToPosn map[int][][3]int, posnToBrickId map[[3]int]int, brickId int) bool {
+func canRemoveBrick(brickIdToPosn map[int][][3]int, brickId int) bool {
     copyBrickIdToPosn := map[int][][3]int{}
     copyPosnToBrickId := map[[3]int]int{}
     for brickIdToCopy := range brickIdToPosn {
@@ -113,14 +103,49 @@ func canRemoveBrick(brickIdToPosn map[int][][3]int, posnToBrickId map[[3]int]int
             brickToCopy := brickIdToPosn[brickIdToCopy]
             var copiedBrick [][3]int
             for _, col := range brickToCopy {
-                copyPosnToBrickId[col] = brickIdToCopy
-                copiedBrick = append(copiedBrick, [3]int{col[0],col[1],col[2]})
+							copiedCol := [3]int{col[0],col[1],col[2]}
+							copyPosnToBrickId[copiedCol] = brickIdToCopy
+							copiedBrick = append(copiedBrick, copiedCol)
             }
             copyBrickIdToPosn[brickIdToCopy] = copiedBrick
         }
     }
     
     return !simulateFallingBricks(copyBrickIdToPosn,copyPosnToBrickId)
+}
+
+func bricksToObj(brickIdToPosn map[int][][3]int, filename string) {
+	file, err := os.Create(filename)
+	if err != nil {
+		fmt.Println("Could not open", filename)
+		return
+	}
+	defer file.Close()
+
+	writer := bufio.NewWriter(file)
+	defer writer.Flush()
+
+	var vertexCounter = 1
+	for brickId := range brickIdToPosn {
+		brick := brickIdToPosn[brickId]
+		bottomLeftCorner := brick[0]
+		highestBrick := brick[len(brick)-1]
+		topRightCorner := [3]int{highestBrick[0]+1, highestBrick[1]+1, highestBrick[2]+1}
+
+		// 8 corners to make rectangular prism
+		corners := [8][3]int {
+			bottomLeftCorner, //near bottom Left
+			//near up     left
+			//near up     right
+			//near bottom Right
+			//far  bottom left
+			//far  up left
+			topRightCorner 
+		}
+
+
+		// 6 rectangles to make a rectangular prism
+	}
 }
 
 /**
@@ -159,7 +184,9 @@ func countRemovableBricks(bricks [][2][3]int) int {
 		fmt.Println("countRemovableBricks", "posnToBrickId", posnToBrickId)
 	}
 
-    simulateFallingBricks(brickIdToPosn,posnToBrickId)
+	bricksToObj(brickIdToPosn, "day22_before_falling.obj")
+	simulateFallingBricks(brickIdToPosn,posnToBrickId)
+	bricksToObj(brickIdToPosn, "day22_after_falling.obj")
 
 	if DEBUG {
 		fmt.Println("simulateFallingBricks", "brickIdToPosn", brickIdToPosn)
@@ -168,7 +195,7 @@ func countRemovableBricks(bricks [][2][3]int) int {
 
     var safeBricks = 0
     for brickId := range brickIdToPosn {
-        if canRemoveBrick(brickIdToPosn,posnToBrickId, brickId) {
+        if canRemoveBrick(brickIdToPosn, brickId) {
             safeBricks++
         }
     }
